@@ -23,6 +23,11 @@ DUREE_MAX = 12.0
 DUREE_MIN = 0.4
 
 
+def nom_piste(langue: str, voix: str) -> str:
+    """Nom de la piste audio de traduction destinée à une langue et une voix données."""
+    return f"traduction-{langue}-{voix}"
+
+
 def mp3_vers_pcm(chemin: str) -> bytes:
     conteneur = av.open(chemin)
     reechantillonneur = av.AudioResampler(format="s16", layout="mono", rate=FREQUENCE)
@@ -60,39 +65,40 @@ async def jouer(pcm: bytes, source: rtc.AudioSource) -> None:
 
 
 class Salle:
-    """Connaît les langues des participants et publie une piste par langue."""
+    """Connaît les langues et voix des auditeurs et publie une piste par (langue, voix)."""
 
     def __init__(self, room: rtc.Room):
         self.room = room
         self.pistes: dict[str, rtc.AudioSource] = {}
 
-    async def cibles(self) -> dict[str, str]:
-        """Retourne, pour chaque langue présente dans la salle, sa voix de synthèse."""
-        cibles: dict[str, str] = {}
+    async def cibles(self) -> dict[str, tuple[str, str]]:
+        """Retourne, pour chaque piste demandée, la langue et la voix de synthèse."""
+        cibles: dict[str, tuple[str, str]] = {}
         for participant in self.room.remote_participants.values():
             if participant.identity.startswith("agent"):
                 continue
             try:
-                langue = json.loads(participant.metadata or "{}").get("langue")
+                meta = json.loads(participant.metadata or "{}")
             except json.JSONDecodeError:
                 continue
-            if not langue or langue in cibles:
+            langue = meta.get("langue")
+            if not langue:
                 continue
-            voix = await voix_pour(langue)
-            if voix:
-                cibles[langue] = voix
-            else:
+            voix = meta.get("voix") or await voix_pour(langue)
+            if not voix:
                 log.warning("Aucune voix disponible pour la langue %s", langue)
+                continue
+            cibles.setdefault(nom_piste(langue, voix), (langue, voix))
         return cibles
 
-    async def source(self, langue: str) -> rtc.AudioSource:
-        if langue not in self.pistes:
+    async def source(self, nom: str) -> rtc.AudioSource:
+        if nom not in self.pistes:
             source = rtc.AudioSource(FREQUENCE, 1)
-            piste = rtc.LocalAudioTrack.create_audio_track(f"traduction-{langue}", source)
+            piste = rtc.LocalAudioTrack.create_audio_track(nom, source)
             await self.room.local_participant.publish_track(piste)
-            self.pistes[langue] = source
-            log.info("Piste publiée : traduction-%s", langue)
-        return self.pistes[langue]
+            self.pistes[nom] = source
+            log.info("Piste publiée : %s", nom)
+        return self.pistes[nom]
 
 
 async def traiter_segment(pcm: bytes, salle: Salle) -> None:
@@ -109,24 +115,29 @@ async def traiter_segment(pcm: bytes, salle: Salle) -> None:
             return
         log.info("[%s] %s", langue_source, texte)
 
+        # La traduction ne dépend que de la langue : on la calcule une fois par langue.
+        traductions: dict[str, str] = {}
         diffusions = []
-        for langue_cible, voix in cibles.items():
+        for nom, (langue_cible, voix) in cibles.items():
             if langue_cible == langue_source:
                 continue
             try:
-                traduit = await asyncio.to_thread(traduire, texte, langue_source, langue_cible)
-                log.info("[%s] %s", langue_cible, traduit)
-                mp3 = os.path.join(dossier, f"voix-{langue_cible}.mp3")
-                await synthetiser(traduit, voix, mp3)
+                if langue_cible not in traductions:
+                    traductions[langue_cible] = await asyncio.to_thread(
+                        traduire, texte, langue_source, langue_cible
+                    )
+                    log.info("[%s] %s", langue_cible, traductions[langue_cible])
+                mp3 = os.path.join(dossier, f"{nom}.mp3")
+                await synthetiser(traductions[langue_cible], voix, mp3)
                 audio = await asyncio.to_thread(mp3_vers_pcm, mp3)
             except Exception as erreur:
-                log.warning("Traduction vers %s ignorée : %s", langue_cible, erreur)
+                log.warning("Traduction vers %s (%s) ignorée : %s", langue_cible, voix, erreur)
                 continue
-            diffusions.append((langue_cible, audio))
+            diffusions.append((nom, audio))
 
     taches = []
-    for langue_cible, audio in diffusions:
-        source = await salle.source(langue_cible)
+    for nom, audio in diffusions:
+        source = await salle.source(nom)
         taches.append(jouer(audio, source))
     if taches:
         await asyncio.gather(*taches)

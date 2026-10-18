@@ -39,6 +39,8 @@
     <input id="nom" autocomplete="off">
     <label for="langue">Votre langue</label>
     <select id="langue"></select>
+    <label for="voix">Voix de traduction</label>
+    <select id="voix"></select>
     <label for="salle">Nom de la salle</label>
     <input id="salle" autocomplete="off">
     <button id="rejoindre">Rejoindre l'appel</button>
@@ -72,38 +74,65 @@
 
     let room = null;
     let maLangue = null;
+    let maVoix = null;
     const conteneurAudio = document.getElementById("audio");
+    const selectLangue = document.getElementById("langue");
+    const selectVoix = document.getElementById("voix");
 
     const statut = (texte) => document.getElementById("statut").textContent = texte;
 
-    function langueDuParticipant(participant) {
+    // Charge les voix disponibles pour la langue choisie. Les voix féminines viennent en premier.
+    async function chargerVoix() {
+      selectVoix.innerHTML = "";
       try {
-        return JSON.parse(participant.metadata || "{}").langue || null;
+        const reponse = await fetch(`/voix?langue=${encodeURIComponent(selectLangue.value)}`);
+        if (!reponse.ok) throw new Error(await reponse.text());
+        const voix = await reponse.json();
+        voix.forEach(({ voix: code, genre, nom }) => {
+          const option = document.createElement("option");
+          option.value = code;
+          option.textContent = `${nom} (${genre === "Female" ? "féminine" : "masculine"})`;
+          selectVoix.appendChild(option);
+        });
+        if (!voix.length) statut("Aucune voix disponible pour cette langue.");
+      } catch (erreur) {
+        statut("Erreur voix : " + erreur.message);
+      }
+    }
+    selectLangue.addEventListener("change", chargerVoix);
+    chargerVoix();
+
+    function metadonneesDuParticipant(participant) {
+      try {
+        return JSON.parse(participant.metadata || "{}");
       } catch {
-        return null;
+        return {};
       }
     }
 
     // Je n'entends que :
-    // - la voix traduite par l'agent dans ma langue ;
+    // - la voix traduite par l'agent dans ma langue et avec ma voix ;
     // - la voix originale d'un participant qui parle déjà ma langue.
     function doitEtreEntendu(track, publication, participant) {
       if (track.kind !== "audio") return false;
       if (participant.isAgent) {
-        return publication.trackName === "traduction-" + maLangue;
+        return publication.trackName === `traduction-${maLangue}-${maVoix}`;
       }
-      return langueDuParticipant(participant) === maLangue;
+      return metadonneesDuParticipant(participant).langue === maLangue;
     }
 
     document.getElementById("rejoindre").addEventListener("click", async () => {
       const nom = document.getElementById("nom").value.trim();
       const salle = document.getElementById("salle").value.trim();
-      maLangue = document.getElementById("langue").value;
+      maLangue = selectLangue.value;
+      maVoix = selectVoix.value;
       if (!nom || !salle) { statut("Renseignez votre nom et la salle."); return; }
+      if (!maVoix) { statut("Choisissez une voix."); return; }
 
       statut("Connexion...");
       const reponse = await fetch(
-        `/token?identite=${encodeURIComponent(nom)}&salle=${encodeURIComponent(salle)}&langue=${encodeURIComponent(maLangue)}`
+        `/token?identite=${encodeURIComponent(nom)}&salle=${encodeURIComponent(salle)}` +
+        `&langue=${encodeURIComponent(maLangue)}&voix=${encodeURIComponent(maVoix)}`
       );
       if (!reponse.ok) { statut("Erreur : " + (await reponse.text())); return; }
       const { token, url } = await reponse.json();
@@ -125,7 +154,8 @@
         statut("Appel terminé.");
         document.getElementById("rejoindre").disabled = false;
         document.getElementById("quitter").disabled = true;
-        document.getElementById("langue").disabled = false;
+        selectLangue.disabled = false;
+        selectVoix.disabled = false;
       });
 
       await room.connect(url, token);
@@ -135,7 +165,8 @@
       statut("Connecté à « " + salle + " » en " + maLangue + ". Parlez, les autres entendront leur langue.");
       document.getElementById("rejoindre").disabled = true;
       document.getElementById("quitter").disabled = false;
-      document.getElementById("langue").disabled = true;
+      selectLangue.disabled = true;
+      selectVoix.disabled = true;
     });
 
     document.getElementById("quitter").addEventListener("click", () => {
