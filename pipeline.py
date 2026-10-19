@@ -62,26 +62,3 @@ def traduire(texte: str, source: str, cible: str) -> str:
 async def synthetiser(texte: str, voix: str, sortie: str) -> str:
     await edge_tts.Communicate(texte, voix).save(sortie)
     return sortie
-
-
-async def traiter(chemin_audio: str, langue_cible: str, voix: str | None = None) -> dict:
-    texte, langue_source = transcrire(chemin_audio)
-
-    if not texte.strip():
-        return {
-            "original": "",
-            "langue_source": langue_source,
-            "traduction": "",
-            "audio": None,
-            "message": "Aucune parole détectée.",
-        }
-
-    traduit = traduire(texte, langue_source, langue_cible)
-    voix = voix or await voix_pour(langue_cible)
-    audio = await synthetiser(traduit, voix, "sortie.mp3")
-    return {
-        "original": texte,
-        "langue_source": langue_source,
-        "traduction": traduit,
-        "audio": audio,
-    }
