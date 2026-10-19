@@ -1,6 +1,6 @@
 /* Appel traduit : interface.
    Tous les couleurs passent par des variables. Un thème = un bloc qui les redéfinit
-   (body[data-theme="..."]). Thème par défaut : nuit. */
+   (:root[data-theme="..."]). Thème par défaut : nuit. */
 :root {
   --fond: #04050b;
   --halo-1: rgba(125, 90, 255, .22);
@@ -25,7 +25,7 @@
   color-scheme: dark;
 }
 
-body[data-theme="aurore"] {
+:root[data-theme="aurore"] {
   --fond: #12060f;
   --halo-1: rgba(255, 110, 160, .2);
   --halo-2: rgba(255, 190, 120, .1);
@@ -41,7 +41,7 @@ body[data-theme="aurore"] {
   --discret: #8a6d7c;
 }
 
-body[data-theme="ocean"] {
+:root[data-theme="ocean"] {
   --fond: #02101c;
   --halo-1: rgba(58, 168, 255, .2);
   --halo-2: rgba(94, 240, 216, .1);
@@ -56,7 +56,7 @@ body[data-theme="ocean"] {
   --discret: #5c7d93;
 }
 
-body[data-theme="emeraude"] {
+:root[data-theme="emeraude"] {
   --fond: #03120c;
   --halo-1: rgba(110, 242, 160, .18);
   --halo-2: rgba(212, 243, 122, .1);
@@ -71,7 +71,7 @@ body[data-theme="emeraude"] {
   --discret: #618472;
 }
 
-body[data-theme="clair"] {
+:root[data-theme="clair"] {
   color-scheme: light;
   --fond: #eef2f9;
   --halo-1: rgba(37, 99, 235, .1);
@@ -124,7 +124,7 @@ html { background: var(--fond); }
   z-index: 0;
   pointer-events: none;
 }
-body[data-theme="clair"] #fond { opacity: .35; }
+:root[data-theme="clair"] #fond { opacity: .35; }
 
 .scene {
   position: relative;

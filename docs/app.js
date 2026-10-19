@@ -64,7 +64,7 @@ function appliquerReglages() {
   corps.classList.add(`taille-${reglages.taille}`);
   const theme = THEMES.includes(reglages.theme) ? reglages.theme : "nuit";
   $("theme").value = theme;
-  corps.dataset.theme = theme;
+  document.documentElement.dataset.theme = theme;
   document.dispatchEvent(new Event("themechange"));
 }
 
