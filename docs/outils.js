@@ -53,5 +53,39 @@
     }
   }
 
-  window.Outils = { decouper, codeMyMemory, paireMyMemory, cleCache, memoriser, lireCache, lireMessage, TAILLE_CACHE };
+  // Mots d'hésitation : une phrase qui n'est que cela ne vaut pas d'être traduite.
+  const HESITATIONS = new Set(["euh", "heu", "hum", "hmm", "mm", "mmm", "uh", "um", "ah", "oh", "eh"]);
+  const DELAI_DOUBLON_MS = 4000;
+
+  // Vrai si la phrase reconnue mérite d'être envoyée : assez longue, avec du contenu réel.
+  function texteUtile(texte) {
+    const propre = String(texte || "").trim();
+    if (propre.length < 2) return false;
+    if (!/[\p{L}\p{N}]/u.test(propre)) return false;
+    const mots = propre.toLowerCase().split(/\s+/).map((m) => m.replace(/[^\p{L}\p{N}]/gu, ""));
+    return mots.some((m) => m && !HESITATIONS.has(m));
+  }
+
+  // Un micro capte parfois la même phrase deux fois (écho des haut-parleurs, reprise).
+  function estDoublon(texte, precedent, maintenant) {
+    if (!precedent) return false;
+    return precedent.texte === texte && maintenant - precedent.heure < DELAI_DOUBLON_MS;
+  }
+
+  // Requête vers un service de secours compatible LibreTranslate (adresse fournie dans config.js).
+  function requeteSecours(adresse, texte, de, vers) {
+    return {
+      url: adresse,
+      options: {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ q: texte, source: de, target: vers, format: "text" }),
+      },
+    };
+  }
+
+  window.Outils = {
+    decouper, codeMyMemory, paireMyMemory, cleCache, memoriser, lireCache, lireMessage,
+    texteUtile, estDoublon, requeteSecours, TAILLE_CACHE,
+  };
 })();

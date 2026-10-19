@@ -38,6 +38,18 @@ Sur Android, l'APK est construit automatiquement (voir plus bas).
 Le service de jetons accepte une requête `POST /token` au format JSON
 (`identite`, `salle`, `langue`, `motdepasse`) et répond `{ token, url }`.
 
+## Traduction de secours (facultatif)
+
+Si MyMemory est saturé ou indisponible, l'application peut utiliser un second service compatible
+LibreTranslate. Renseignez son adresse complète (qui se termine par `/translate`) dans
+`docs/config.js`, dans `TRADUCTION_SECOURS`. Laissez vide pour ne rien utiliser.
+
+## Ce que fait l'application pour éviter les traductions inutiles
+
+- Les hésitations seules (« euh », « hum ») et les phrases vides ne sont pas envoyées.
+- Une même phrase captée deux fois en quelques secondes (écho des haut-parleurs) n'est envoyée qu'une fois.
+- Les traductions déjà faites sont mises en cache, pour ne pas consommer le quota inutilement.
+
 ## Vérifier le code
 
     node tests/test_worker.mjs     # service de jetons
@@ -90,5 +102,5 @@ avec de vrais participants.
 - [x] Version sans Python (navigateur)
 - [x] Application Android (APK)
 - [x] Reconnexion et changement de langue en cours d'appel
-- [ ] Traduction de secours si MyMemory est indisponible
-- [ ] Détection d'activité vocale
+- [x] Traduction de secours si MyMemory est indisponible (facultatif)
+- [x] Filtre des bruits, hésitations et doublons

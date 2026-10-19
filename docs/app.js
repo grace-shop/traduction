@@ -24,13 +24,18 @@ let contexteAudio = null;
 let fileLecture = [];
 let enLecture = false;
 let quotaAtteint = false;
+let dernierEnvoi = null;  // dernier message envoyé, pour écarter les doublons
 const langues = new Map(); // identité -> code de langue, pour chaque participant distant
 
 // ---------- Affichage ----------
 
 function etat(texte) { $("statut").textContent = texte; }
 function etatAppel(texte) { $("etat").textContent = texte; }
-function allerVers(phase) { corps.dataset.phase = phase; }
+function allerVers(phase) {
+  corps.dataset.phase = phase;
+  // Au passage en appel, le focus va sur le micro : utile au clavier et au lecteur d'écran.
+  if (phase === "appel") $("micro").focus({ preventScroll: true });
+}
 function trouverLangue(code) { return window.LANGUES.find((l) => l.code === code); }
 
 function remplirSelectLangues(select, valeur) {
@@ -127,11 +132,7 @@ function suivreNiveau(piste) {
 
 // ---------- Traduction ----------
 
-async function traduire(texte, de, vers) {
-  const cle = Outils.cleCache(texte, de, vers);
-  const dejaFait = Outils.lireCache(cle);
-  if (dejaFait) return dejaFait;
-
+async function traduireMyMemory(texte, de, vers) {
   const resultats = [];
   for (const morceau of Outils.decouper(texte, LONGUEUR_MAX_TRADUCTION)) {
     const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(morceau)}` +
@@ -146,7 +147,40 @@ async function traduire(texte, de, vers) {
     }
     resultats.push(donnees.responseData.translatedText);
   }
-  const traduit = resultats.join(" ");
+  return resultats.join(" ");
+}
+
+// Service de secours (LibreTranslate ou compatible), utilisé si MyMemory échoue.
+async function traduireSecours(texte, de, vers, adresse) {
+  const resultats = [];
+  for (const morceau of Outils.decouper(texte, LONGUEUR_MAX_TRADUCTION)) {
+    const requete = Outils.requeteSecours(adresse, morceau, de, vers);
+    const reponse = await fetch(requete.url, requete.options);
+    if (!reponse.ok) throw new Error("secours indisponible");
+    const donnees = await reponse.json();
+    if (!donnees || typeof donnees.translatedText !== "string") throw new Error("secours refusé");
+    resultats.push(donnees.translatedText);
+  }
+  return resultats.join(" ");
+}
+
+async function traduire(texte, de, vers) {
+  const cle = Outils.cleCache(texte, de, vers);
+  const dejaFait = Outils.lireCache(cle);
+  if (dejaFait) return dejaFait;
+
+  let traduit;
+  try {
+    traduit = await traduireMyMemory(texte, de, vers);
+  } catch (erreur) {
+    const secours = window.CONFIG && window.CONFIG.TRADUCTION_SECOURS;
+    if (!secours) throw erreur;
+    try {
+      traduit = await traduireSecours(texte, de, vers, secours);
+    } catch {
+      throw erreur; // on garde l'erreur d'origine (quota, par exemple) pour le message affiché
+    }
+  }
   Outils.memoriser(cle, traduit);
   return traduit;
 }
@@ -173,6 +207,11 @@ function lireSuivante() {
 
 function envoyerTexte(texte) {
   if (!room) return;
+  const maintenant = Date.now();
+  // Bruits et hésitations ignorés ; une même phrase captée deux fois n'est envoyée qu'une fois.
+  if (!Outils.texteUtile(texte)) return;
+  if (Outils.estDoublon(texte, dernierEnvoi, maintenant)) return;
+  dernierEnvoi = { texte, heure: maintenant };
   const charge = encodeur.encode(JSON.stringify({ langue: maLangue, auteur: monIdentite, texte }));
   room.localParticipant.publishData(charge, { reliable: true, topic: SUJET_TEXTE })
     .catch(() => etatAppel("Message non envoyé. Vérifiez votre connexion."));
@@ -370,6 +409,7 @@ function nettoyer(message) {
   Plateforme.arreterLecture();
   fileLecture = [];
   enLecture = false;
+  dernierEnvoi = null;
   if (contexteAudio) { contexteAudio.close().catch(() => {}); contexteAudio = null; }
   analyseur = null;
   langues.clear();

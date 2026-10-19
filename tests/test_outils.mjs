@@ -52,6 +52,37 @@ let groupes = 0;
   groupes++;
 }
 
+// Filtre : bruits et hésitations ignorés, phrases utiles conservées.
+{
+  assert.equal(O.texteUtile(""), false);
+  assert.equal(O.texteUtile("a"), false);
+  assert.equal(O.texteUtile("..."), false);
+  assert.equal(O.texteUtile("euh"), false);
+  assert.equal(O.texteUtile("euh hum"), false);
+  assert.equal(O.texteUtile("euh bonjour"), true);
+  assert.equal(O.texteUtile("Bonjour à tous"), true);
+  groupes++;
+}
+
+// Doublons : même phrase dans la fenêtre de quelques secondes seulement.
+{
+  const precedent = { texte: "Bonjour", heure: 1000 };
+  assert.equal(O.estDoublon("Bonjour", precedent, 2000), true);
+  assert.equal(O.estDoublon("Bonjour", precedent, 9000), false);
+  assert.equal(O.estDoublon("Au revoir", precedent, 2000), false);
+  assert.equal(O.estDoublon("Bonjour", null, 2000), false);
+  groupes++;
+}
+
+// Secours : requête POST au format LibreTranslate.
+{
+  const r = O.requeteSecours("https://exemple.test/translate", "Bonjour", "fr", "en");
+  assert.equal(r.url, "https://exemple.test/translate");
+  assert.equal(r.options.method, "POST");
+  assert.deepEqual(JSON.parse(r.options.body), { q: "Bonjour", source: "fr", target: "en", format: "text" });
+  groupes++;
+}
+
 // Langues : codes uniques, codes BCP 47 cohérents avec le code court.
 {
   const codes = L.map((l) => l.code);
