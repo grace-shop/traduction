@@ -109,10 +109,23 @@ Mise en place :
 1. Créer un compte Cloudflare (gratuit) et un projet LiveKit Cloud (gratuit).
 2. Déployer le service : `cd jetons && npx wrangler deploy`
 3. Enregistrer les secrets, un par un, avec `npx wrangler secret put NOM` :
-   `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `MOT_DE_PASSE_APPEL`,
-   et `ORIGINE_AUTORISEE` (l'adresse du site GitHub Pages, par exemple `https://votre-nom.github.io`).
-4. Mettre l'adresse obtenue dans `docs/config.js` (`TOKEN_URL`).
-5. Dans GitHub : Settings > Pages > Deploy from a branch > la branche, dossier `/docs`.
+   `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `MOT_DE_PASSE_APPEL`.
+4. Enregistrer `ORIGINE_AUTORISEE`, séparées par des virgules, avec les adresses qui peuvent
+   appeler le service : `https://grace-shop.github.io,https://localhost,capacitor://localhost`
+   (le site, le test local et l'application Android).
+5. Mettre l'adresse obtenue dans `docs/config.js` (`TOKEN_URL`).
+6. Dans GitHub : Settings > Pages > Deploy from a branch > la branche, dossier `/docs`.
+7. Recommandé : dans le tableau de bord Cloudflare, ajouter une règle de limitation de débit
+   sur le chemin `/token` (par exemple 10 requêtes par minute et par adresse IP). Le service
+   limite déjà les mots de passe erronés, mais cette règle est la vraie protection contre les
+   attaques, car le cache du service est propre à chaque centre de données.
+
+Le service de jetons accepte une requête `POST /token` au format JSON
+(`identite`, `salle`, `langue`, `motdepasse`) et répond `{ token, url }`.
+
+La politique de confidentialité est dans `docs/confidentialite.html`. Ses champs entre crochets
+(responsable, adresse, durée de conservation, transferts hors UE) doivent être complétés et relus
+avant toute utilisation avec de vrais participants.
 
 Limites connues :
 
