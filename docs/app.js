@@ -446,9 +446,8 @@ async function basculerCamera() {
 async function rejoindre() {
   const nom = $("nom").value.trim();
   const salle = $("salle").value.trim();
-  const motdepasse = $("motdepasse").value;
+  const motdepasse = window.CONFIG.MOT_DE_PASSE;
   if (!nom || !salle) { etat(t("st_nom_salle")); return; }
-  if (!motdepasse) { etat(t("st_mdp")); return; }
   if (!$("consentement").checked) {
     etat(t("st_consent"));
     return;
@@ -561,7 +560,6 @@ async function rejoindre() {
   room.remoteParticipants.forEach((p) => memoriserLangue(p));
   suivreNiveau(micro);
   $("nom-salle").textContent = salle;
-  $("motdepasse").value = "";
   $("langue-appel").value = maLangue;
   micActif = true;
   $("micro").setAttribute("aria-pressed", "false");
@@ -572,9 +570,14 @@ async function rejoindre() {
   rafraichirParticipants();
   appliquerAudio();
 
-  Plateforme.demarrerEcoute(maLangueBcp, envoyerTexte).catch(() => {
-    etatAppel(t("st_reco_arret"));
-  });
+  demarrerMicroTexte();
+}
+
+// Écoute ma voix et envoie chaque phrase. Une erreur bloquante est signalée à l'écran.
+function demarrerMicroTexte() {
+  return Plateforme.demarrerEcoute(maLangueBcp, envoyerTexte, (erreur) => {
+    etatAppel(`${t("st_reco_arret")} (${erreur})`);
+  }).catch(() => etatAppel(t("st_reco_arret")));
 }
 
 // Changer de langue pendant l'appel : les autres en sont informés.
@@ -586,7 +589,7 @@ function changerLangue(nouvelle) {
   const charge = encodeur.encode(JSON.stringify({ langue: nouvelle }));
   room.localParticipant.publishData(charge, { reliable: true, topic: SUJET_LANGUE }).catch(() => {});
   Plateforme.arreterEcoute();
-  if (micActif) Plateforme.demarrerEcoute(maLangueBcp, envoyerTexte);
+  if (micActif) demarrerMicroTexte();
   appliquerAudio();
   rafraichirParticipants();
   etatAppel(t("st_langue", { langue: trouverLangue(nouvelle).nom }));

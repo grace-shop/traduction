@@ -30,7 +30,8 @@
   }
 
   // Démarre l'écoute. onTexte reçoit chaque phrase terminée.
-  function demarrerEcoute(bcp47, onTexte) {
+  // onProbleme reçoit le nom de l'erreur quand la reconnaissance ne peut plus fonctionner.
+  function demarrerEcoute(bcp47, onTexte, onProbleme) {
     ecoute = true;
     suspendue = false;
     if (natif()) return boucleNative(bcp47, onTexte);
@@ -47,7 +48,11 @@
       }
     };
     reconnaissanceWeb.onend = () => { setTimeout(relancerWeb, 300); };
-    reconnaissanceWeb.onerror = () => {};
+    // Erreurs qui empêchent d'écouter (pas le silence, qui est normal) : on prévient la personne.
+    const bloquantes = ["not-allowed", "service-not-allowed", "audio-capture", "language-not-supported"];
+    reconnaissanceWeb.onerror = (e) => {
+      if (bloquantes.includes(e.error) && typeof onProbleme === "function") onProbleme(e.error);
+    };
     relancerWeb();
     return Promise.resolve();
   }

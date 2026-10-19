@@ -95,7 +95,9 @@ async function enregistrerEchec(ip, compte) {
 // Les valeurs saisies dans le tableau de bord peuvent contenir des espaces ou un retour à la
 // ligne en trop, qui font échouer la vérification chez LiveKit. On les retire ici.
 // Chaque variable est lue par son nom : Cloudflare ne les expose pas toutes à l'énumération.
-const NOMS_CONFIG = ["LIVEKIT_URL", "LIVEKIT_API_KEY", "LIVEKIT_API_SECRET", "MOT_DE_PASSE_APPEL", "ORIGINE_AUTORISEE"];
+const NOMS_CONFIG = ["LIVEKIT_URL", "LIVEKIT_API_KEY", "LIVEKIT_API_SECRET", "ORIGINE_AUTORISEE"];
+// Mot de passe fixe de tous les appels. L'application l'envoie toute seule : personne ne le saisit.
+const MOT_DE_PASSE_FIXE = "appel2026";
 function nettoyerEnv(env) {
   const propre = { ...env };
   for (const nom of NOMS_CONFIG) {
@@ -116,7 +118,7 @@ export default {
       return reponse({ erreur: "Introuvable" }, 404, origine);
     }
 
-    if (!env.LIVEKIT_URL || !env.LIVEKIT_API_KEY || !env.LIVEKIT_API_SECRET || !env.MOT_DE_PASSE_APPEL) {
+    if (!env.LIVEKIT_URL || !env.LIVEKIT_API_KEY || !env.LIVEKIT_API_SECRET) {
       return reponse({ erreur: "Configuration manquante" }, 500, origine);
     }
 
@@ -132,7 +134,7 @@ export default {
       return reponse({ erreur: "Trop de tentatives. Réessayez dans quelques minutes." }, 429, origine);
     }
 
-    if (!egalite(env.MOT_DE_PASSE_APPEL, motdepasse)) {
+    if (!egalite(MOT_DE_PASSE_FIXE, motdepasse)) {
       await enregistrerEchec(ip, (await echecsDepuis(ip)) + 1);
       return reponse({ erreur: "Mot de passe incorrect" }, 401, origine);
     }

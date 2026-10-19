@@ -22,6 +22,13 @@
   <canvas id="fond" aria-hidden="true"></canvas>
 
   <main class="scene">
+    <div class="accroche" aria-hidden="true">
+      <p class="accroche-marque">Appel traduit</p>
+      <p class="accroche-titre" data-i18n="sous_titre">Parlez votre langue, tout le monde comprend.</p>
+      <p class="accroche-note">
+        <span></span><span></span><span></span><span></span><span></span>
+      </p>
+    </div>
     <section class="panneau" aria-labelledby="titre">
 
       <header class="entete">
@@ -60,9 +67,6 @@
         </label>
         <label class="champ" for="salle"><span data-i18n="champ_salle">Nom de la salle</span>
           <input id="salle" autocomplete="off" maxlength="64" data-i18n-placeholder="ex_salle" placeholder="Ex. reunion-famille">
-        </label>
-        <label class="champ" for="motdepasse"><span data-i18n="champ_mdp">Mot de passe de l'appel</span>
-          <input id="motdepasse" type="password" autocomplete="off">
         </label>
 
         <label class="consentement">

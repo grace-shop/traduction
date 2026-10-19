@@ -5,4 +5,6 @@ window.CONFIG = {
   // Service de secours facultatif, compatible LibreTranslate (adresse complète /translate).
   // Laisser vide pour ne pas l'utiliser. Il sert si MyMemory est saturé ou indisponible.
   TRADUCTION_SECOURS: "",
+  // Mot de passe commun de tous les appels. Il est envoyé automatiquement : personne ne le saisit.
+  MOT_DE_PASSE: "appel2026",
 };

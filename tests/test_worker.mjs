@@ -7,7 +7,7 @@ const env = {
   LIVEKIT_URL: "wss://projet.livekit.cloud",
   LIVEKIT_API_KEY: "APIcle123",
   LIVEKIT_API_SECRET: "secret-de-test-tres-long-0123456789",
-  MOT_DE_PASSE_APPEL: "mot-de-passe-test",
+  MOT_DE_PASSE_APPEL: "ignore-desormais",
   ORIGINE_AUTORISEE: "https://exemple.github.io,https://localhost,capacitor://localhost",
 };
 const maintenant = 1800000000;
@@ -33,7 +33,7 @@ function decoder(jeton) {
   };
 }
 
-const bon = { identite: "Ami", salle: "reunion", langue: "fr", motdepasse: "mot-de-passe-test" };
+const bon = { identite: "Ami", salle: "reunion", langue: "fr", motdepasse: "appel2026" };
 let groupes = 0;
 
 // 1. Un jeton valide est délivré, signé, avec les bons droits.
@@ -78,7 +78,7 @@ let groupes = 0;
 
 // 5. Le mot de passe n'est plus accepté dans l'adresse (journaux du serveur).
 {
-  const r = await worker.fetch(new Request("https://jetons.test/token?identite=Ami&salle=reunion&langue=fr&motdepasse=mot-de-passe-test", { method: "GET" }), env, {}, maintenant);
+  const r = await worker.fetch(new Request("https://jetons.test/token?identite=Ami&salle=reunion&langue=fr&motdepasse=appel2026", { method: "GET" }), env, {}, maintenant);
   assert.equal(r.status, 404);
   groupes++;
 }
@@ -108,7 +108,7 @@ let groupes = 0;
 // 9. Valeurs avec espaces parasites (copiées-collées) : le service les ignore.
 {
   const avecEspaces = { ...env, LIVEKIT_API_SECRET: "  " + env.LIVEKIT_API_SECRET + "\n", LIVEKIT_API_KEY: " " + env.LIVEKIT_API_KEY + " " };
-  const r = await appel({ identite: "awa", salle: "salle", langue: "fr", motdepasse: env.MOT_DE_PASSE_APPEL }, { env: avecEspaces });
+  const r = await appel({ identite: "awa", salle: "salle", langue: "fr", motdepasse: "appel2026" }, { env: avecEspaces });
   assert.equal(r.status, 200);
   const d = decoder((await r.json()).token);
   assert.equal(d.signatureValide, true);
@@ -120,7 +120,7 @@ let groupes = 0;
 {
   const cacheEnv = {};
   for (const [cle, valeur] of Object.entries(env)) Object.defineProperty(cacheEnv, cle, { value: valeur, enumerable: false });
-  const r = await appel({ identite: "awa", salle: "salle", langue: "fr", motdepasse: env.MOT_DE_PASSE_APPEL }, { env: cacheEnv });
+  const r = await appel({ identite: "awa", salle: "salle", langue: "fr", motdepasse: "appel2026" }, { env: cacheEnv });
   assert.equal(r.status, 200);
   groupes++;
 }
