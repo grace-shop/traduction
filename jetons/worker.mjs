@@ -58,7 +58,10 @@ function origineAutorisee(origineDemandee, env) {
 }
 
 function reponse(corps, statut, origine) {
-  return new Response(JSON.stringify(corps), {
+  // Un statut 204 ne peut pas avoir de corps : sans cette précaution, la réponse plante
+  // et le navigateur bloque toutes les demandes.
+  const sansCorps = statut === 204;
+  return new Response(sansCorps ? null : JSON.stringify(corps), {
     status: statut,
     headers: {
       "Content-Type": "application/json",

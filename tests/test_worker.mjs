@@ -96,4 +96,13 @@ let groupes = 0;
   groupes++;
 }
 
+// 8. Requête de vérification du navigateur (OPTIONS) : réponse 204 sans corps, avec l'autorisation.
+{
+  const r = await worker.fetch(new Request("https://jetons.test/token", { method: "OPTIONS", headers: { Origin: "https://exemple.github.io" } }), env, {}, maintenant);
+  assert.equal(r.status, 204);
+  assert.equal(r.headers.get("Access-Control-Allow-Origin"), "https://exemple.github.io");
+  assert.equal(await r.text(), "");
+  groupes++;
+}
+
 console.log(`OK : ${groupes} groupes de tests du service de jetons passent`);
