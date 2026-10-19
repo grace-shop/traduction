@@ -29,6 +29,9 @@ jobs:
       - name: Créer le projet Android
         run: npx cap add android
 
+      - name: Générer l'icône et l'écran de démarrage
+        run: npx --yes @capacitor/assets@3 generate --android --iconBackgroundColor "#05060c" --splashBackgroundColor "#05060c"
+
       - name: Autoriser le micro et le son
         run: |
           sed -i 's#</manifest>#    <uses-permission android:name="android.permission.RECORD_AUDIO" />\n    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />\n</manifest>#' android/app/src/main/AndroidManifest.xml

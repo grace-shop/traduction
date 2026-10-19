@@ -239,9 +239,9 @@ body[data-phase="appel"] .vue-appel { display: block; }
 }
 .chip.moi { border-color: rgba(124, 245, 255, .3); color: var(--accent); }
 .ligne-langue { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 14px 0 0; }
-.compteur { font-size: .78rem; color: var(--doux); }
+.compteur { font-size: .78rem; color: var(--doux); white-space: nowrap; }
 .langue-appel { display: flex; align-items: center; gap: 8px; margin: 0; }
-.langue-appel span { font-size: .78rem; color: var(--doux); }
+.langue-appel span { font-size: .78rem; color: var(--doux); white-space: nowrap; }
 .langue-appel select { width: auto; margin: 0; padding: 7px 30px 7px 10px; font-size: .85rem; border-radius: 10px; }
 a { color: var(--accent); }
 
