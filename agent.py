@@ -22,6 +22,13 @@ SILENCE_FIN = 0.7
 DUREE_MAX = 12.0
 DUREE_MIN = 0.4
 
+# Un agent se reconnaît à son type de participant, et non à son nom.
+_TYPE_AGENT = getattr(getattr(rtc, "ParticipantKind", None), "PARTICIPANT_KIND_AGENT", None)
+
+
+def est_agent(participant) -> bool:
+    return _TYPE_AGENT is not None and getattr(participant, "kind", None) == _TYPE_AGENT
+
 
 def mp3_vers_pcm(chemin: str) -> bytes:
     conteneur = av.open(chemin)
@@ -70,7 +77,7 @@ class Salle:
         """Retourne, pour chaque piste demandée, la langue et la voix de synthèse."""
         cibles: dict[str, tuple[str, str]] = {}
         for participant in self.room.remote_participants.values():
-            if participant.identity.startswith("agent"):
+            if est_agent(participant):
                 continue
             meta = metadonnees_participant(participant.metadata)
             langue = meta.get("langue")
@@ -93,7 +100,7 @@ class Salle:
         return self.pistes[nom]
 
 
-async def traiter_segment(pcm: bytes, identite: str, salle: Salle) -> None:
+async def traiter_segment(pcm: bytes, auteur: str, salle: Salle) -> None:
     cibles = await salle.cibles()
     if not cibles:
         return
@@ -131,7 +138,7 @@ async def traiter_segment(pcm: bytes, identite: str, salle: Salle) -> None:
     # Chacun ne retient que la langue qui le concerne.
     try:
         await salle.room.local_participant.publish_data(
-            sous_titre(identite, langue_source, texte, traductions),
+            sous_titre(auteur, langue_source, texte, traductions),
             reliable=True,
             topic=SUJET_SOUS_TITRES,
         )
@@ -148,14 +155,14 @@ async def traiter_segment(pcm: bytes, identite: str, salle: Salle) -> None:
 
 async def boucle_traduction(file: asyncio.Queue, salle: Salle) -> None:
     while True:
-        pcm, identite = await file.get()
+        pcm, auteur = await file.get()
         try:
-            await traiter_segment(pcm, identite, salle)
+            await traiter_segment(pcm, auteur, salle)
         except Exception:
             log.exception("Erreur pendant la traduction d'un segment")
 
 
-async def ecouter(track: rtc.RemoteAudioTrack, identite: str, file: asyncio.Queue) -> None:
+async def ecouter(track: rtc.RemoteAudioTrack, auteur: str, file: asyncio.Queue) -> None:
     flux = rtc.AudioStream(track, sample_rate=FREQUENCE, num_channels=1)
     tampon = bytearray()
     silence = 0.0
@@ -180,12 +187,12 @@ async def ecouter(track: rtc.RemoteAudioTrack, identite: str, file: asyncio.Queu
         total = len(tampon) / (2 * FREQUENCE)
         if tampon and (silence >= SILENCE_FIN or total >= DUREE_MAX):
             if total - silence >= DUREE_MIN:
-                await file.put((bytes(tampon), identite))
+                await file.put((bytes(tampon), auteur))
             tampon.clear()
             silence = 0.0
 
     if tampon:
-        await file.put((bytes(tampon), identite))
+        await file.put((bytes(tampon), auteur))
 
 
 async def entrypoint(ctx: JobContext) -> None:
@@ -200,9 +207,11 @@ async def entrypoint(ctx: JobContext) -> None:
     def sur_piste(track, publication, participant):
         if track.kind != rtc.TrackKind.KIND_AUDIO:
             return
-        if participant.identity.startswith("agent"):
+        if est_agent(participant):
             return
-        asyncio.create_task(ecouter(track, participant.identity, file))
+        # Le nom affiché (sans le suffixe technique) sert d'auteur dans les sous-titres.
+        auteur = participant.name or participant.identity
+        asyncio.create_task(ecouter(track, auteur, file))
 
 
 if __name__ == "__main__":
