@@ -105,4 +105,15 @@ let groupes = 0;
   groupes++;
 }
 
+// 9. Valeurs avec espaces parasites (copiées-collées) : le service les ignore.
+{
+  const avecEspaces = { ...env, LIVEKIT_API_SECRET: "  " + env.LIVEKIT_API_SECRET + "\n", LIVEKIT_API_KEY: " " + env.LIVEKIT_API_KEY + " " };
+  const r = await appel({ identite: "awa", salle: "salle", langue: "fr", motdepasse: env.MOT_DE_PASSE_APPEL }, { env: avecEspaces });
+  assert.equal(r.status, 200);
+  const d = decoder((await r.json()).token);
+  assert.equal(d.signatureValide, true);
+  assert.equal(d.entete.alg, "HS256");
+  groupes++;
+}
+
 console.log(`OK : ${groupes} groupes de tests du service de jetons passent`);

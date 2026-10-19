@@ -92,8 +92,19 @@ async function enregistrerEchec(ip, compte) {
   );
 }
 
+// Les valeurs saisies dans le tableau de bord peuvent contenir des espaces ou un retour à la
+// ligne en trop, qui font échouer la vérification chez LiveKit. On les retire ici.
+function nettoyerEnv(env) {
+  const propre = {};
+  for (const [cle, valeur] of Object.entries(env)) {
+    propre[cle] = typeof valeur === "string" ? valeur.trim() : valeur;
+  }
+  return propre;
+}
+
 export default {
-  async fetch(request, env, ctx, maintenant = Math.floor(Date.now() / 1000)) {
+  async fetch(request, envBrut, ctx, maintenant = Math.floor(Date.now() / 1000)) {
+    const env = nettoyerEnv(envBrut);
     const origine = origineAutorisee(request.headers.get("Origin") || "", env);
     if (request.method === "OPTIONS") return reponse({}, 204, origine);
 
