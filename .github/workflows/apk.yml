@@ -8,6 +8,9 @@ on:
   push:
     branches: [version-navigateur]
 
+permissions:
+  contents: write
+
 jobs:
   apk:
     runs-on: ubuntu-latest
@@ -50,3 +53,11 @@ jobs:
         with:
           name: appel-traduit-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Publier l'APK sur une page de téléchargement
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk appel-traduit.apk
+          gh release view apk-latest >/dev/null 2>&1 || gh release create apk-latest --title "Appel traduit (Android)" --notes "Dernière version de l'application Android. Téléchargez appel-traduit.apk, puis installez-le sur votre téléphone." --prerelease
+          gh release upload apk-latest appel-traduit.apk --clobber
