@@ -120,3 +120,28 @@ Limites connues :
 - La voix de lecture est celle du système de l'auditeur. Elle varie selon l'appareil.
 - Chrome envoie l'audio de la reconnaissance aux serveurs de Google : à mentionner dans le consentement.
 - Le son original n'est entendu que des personnes qui parlent la même langue.
+
+## Application Android (APK)
+
+L'APK est construit automatiquement par GitHub Actions (gratuit) :
+
+1. Onglet **Actions** du dépôt > **Construire l'APK Android** > **Run workflow**.
+2. Une fois l'exécution terminée, télécharge **appel-traduit-apk** dans la section *Artifacts*.
+3. Sur le téléphone, ouvre le fichier et autorise l'installation depuis une source inconnue.
+
+Le site de `docs/` est copié dans l'application (Capacitor). Les modules natifs de reconnaissance
+vocale et de lecture sont utilisés automatiquement dans l'application.
+
+## Installer sur téléphone ou ordinateur sans APK
+
+- **Android ou ordinateur** : ouvrez le site dans Chrome ou Edge, puis choisissez *Installer l'application*.
+- **iPhone** : ouvrez le site dans Safari, puis *Partager > Sur l'écran d'accueil*. La reconnaissance
+  vocale sur iPhone n'a pas été vérifiée.
+- **Application iOS native** : non prévue, car elle exige un compte Apple Developer (99 $ par an).
+
+## Interface
+
+- Fond 3D léger (WebGL), désactivé si l'utilisateur demande moins d'animations ou si le téléphone ne le supporte pas.
+- Le cercle central réagit à votre voix : vous voyez que le micro fonctionne.
+- Les sous-titres affichent votre texte et celui des autres, dans votre langue.
+- Résolution adaptée à l'écran (jusqu'à 2x) : rendu net sur les écrans haute densité, sans textures lourdes.

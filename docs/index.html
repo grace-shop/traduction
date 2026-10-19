@@ -2,82 +2,112 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Appel traduit</title>
-  <meta name="theme-color" content="#0f1117">
+  <meta name="description" content="Appels où chacun parle sa langue et entend les autres traduits.">
+  <meta name="theme-color" content="#05060c">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Appel traduit">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icone.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icone.svg">
+  <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
-  <style>
-    :root { color-scheme: dark; }
-    body {
-      margin: 0; min-height: 100vh; display: grid; place-items: center;
-      background: #0f1117; color: #e7e9ee;
-      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-    }
-    .carte {
-      width: min(400px, 92vw); padding: 32px; border-radius: 16px;
-      background: #171a23; box-shadow: 0 10px 40px rgba(0,0,0,.4);
-    }
-    h1 { font-size: 1.3rem; margin: 0 0 24px; font-weight: 600; }
-    label { display: block; font-size: .85rem; color: #9aa3b2; margin-bottom: 6px; }
-    input, select {
-      width: 100%; box-sizing: border-box; padding: 12px; margin-bottom: 16px;
-      border-radius: 10px; border: 1px solid #2a2f3c; background: #0f1117;
-      color: inherit; font-size: 1rem;
-    }
-    .consentement {
-      display: flex; gap: 10px; align-items: flex-start; font-size: .85rem;
-      color: #9aa3b2; margin-bottom: 16px;
-    }
-    .consentement input { width: auto; margin: 3px 0 0; }
-    button {
-      width: 100%; padding: 12px; border: 0; border-radius: 10px;
-      background: #4f7cff; color: #fff; font-size: 1rem; font-weight: 600; cursor: pointer;
-    }
-    button.secondaire { background: #2a2f3c; margin-top: 10px; }
-    button:disabled { opacity: .5; cursor: default; }
-    #statut { margin-top: 16px; font-size: .9rem; color: #9aa3b2; min-height: 1.2em; }
-    .conseil { font-size: .8rem; color: #6f7888; margin-top: 12px; }
-    #sous-titres {
-      margin-top: 20px; min-height: 4em; font-size: 1rem; line-height: 1.4;
-      border-top: 1px solid #2a2f3c; padding-top: 16px;
-    }
-    #sous-titres p { margin: 0 0 8px; }
-    #sous-titres .auteur { color: #9aa3b2; font-size: .8rem; }
-  </style>
 </head>
-<body>
-  <main class="carte">
-    <h1>Appel traduit</h1>
-    <label for="nom">Votre nom</label>
-    <input id="nom" autocomplete="off" maxlength="64">
-    <label for="langue">Votre langue</label>
-    <select id="langue"></select>
-    <label for="voix">Voix de lecture</label>
-    <select id="voix"></select>
-    <label for="salle">Nom de la salle</label>
-    <input id="salle" autocomplete="off" maxlength="64">
-    <label for="motdepasse">Mot de passe de l'appel</label>
-    <input id="motdepasse" type="password" autocomplete="off">
-    <label class="consentement">
-      <input id="consentement" type="checkbox">
-      <span>J'accepte que ma voix soit transcrite par mon navigateur, et que le texte soit traduit
-      par un service tiers (MyMemory), pour cet appel uniquement.</span>
-    </label>
-    <button id="rejoindre">Rejoindre l'appel</button>
-    <button id="quitter" class="secondaire" disabled>Quitter</button>
-    <div id="statut"></div>
-    <p class="conseil">Chrome ou Edge recommandés. Utilisez un casque pour éviter que la traduction ne soit captée par votre micro.</p>
-    <div id="sous-titres" aria-live="polite"></div>
+<body data-phase="accueil">
+  <canvas id="fond" aria-hidden="true"></canvas>
+
+  <main class="scene">
+    <section class="panneau" aria-labelledby="titre">
+
+      <header class="entete">
+        <svg class="logo" viewBox="0 0 64 64" aria-hidden="true">
+          <defs>
+            <radialGradient id="g" cx="35%" cy="30%" r="75%">
+              <stop offset="0" stop-color="#e0faff"/>
+              <stop offset=".3" stop-color="#7cf5ff"/>
+              <stop offset=".75" stop-color="#8b5cf6"/>
+              <stop offset="1" stop-color="#1e1b4b"/>
+            </radialGradient>
+          </defs>
+          <circle cx="32" cy="32" r="30" fill="url(#g)"/>
+          <ellipse cx="32" cy="32" rx="30" ry="9" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="1.2" transform="rotate(-18 32 32)"/>
+        </svg>
+        <div>
+          <h1 class="titre" id="titre">Appel traduit</h1>
+          <p class="sous-titre">Parlez votre langue, tout le monde comprend.</p>
+        </div>
+      </header>
+
+      <!-- Vue 1 : rejoindre -->
+      <div class="vue-accueil">
+        <label class="champ" for="nom"><span>Votre nom</span>
+          <input id="nom" autocomplete="off" maxlength="64" placeholder="Ex. Awa">
+        </label>
+        <label class="champ" for="langue"><span>Votre langue</span>
+          <select id="langue"></select>
+        </label>
+        <label class="champ" for="voix"><span>Voix de lecture</span>
+          <select id="voix"></select>
+        </label>
+        <label class="champ" for="salle"><span>Nom de la salle</span>
+          <input id="salle" autocomplete="off" maxlength="64" placeholder="Ex. reunion-famille">
+        </label>
+        <label class="champ" for="motdepasse"><span>Mot de passe de l'appel</span>
+          <input id="motdepasse" type="password" autocomplete="off">
+        </label>
+
+        <label class="consentement">
+          <input id="consentement" type="checkbox">
+          <span>J'accepte que ma voix soit reconnue par mon appareil, et que le texte soit traduit par un service tiers, pour cet appel uniquement.</span>
+        </label>
+
+        <button id="rejoindre" class="bouton" type="button">Rejoindre l'appel</button>
+        <p id="statut" class="statut" role="status" aria-live="polite"></p>
+        <p class="conseil">Un casque évite que la traduction ne soit captée par votre micro.</p>
+      </div>
+
+      <!-- Vue 2 : en appel -->
+      <div class="vue-appel">
+        <div class="barre">
+          <p class="salle" id="nom-salle"></p>
+          <span class="pastille">En direct</span>
+        </div>
+
+        <div class="orbe-zone" id="zone-orbe" aria-hidden="true">
+          <span class="anneau"></span>
+          <span class="anneau"></span>
+          <span class="orbe"></span>
+        </div>
+
+        <div class="sous-titres" id="sous-titres" aria-live="polite"></div>
+
+        <div class="commandes">
+          <button id="micro" class="bouton secondaire" type="button" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+            <span id="micro-libelle">Micro</span>
+          </button>
+          <button id="quitter" class="bouton danger" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 13c3.5-3.5 14.5-3.5 18 0l-2 3-3-1.5v-2c-2.2-.7-4.8-.7-7 0v2L6 16z"/></svg>
+            Quitter
+          </button>
+        </div>
+        <p id="etat" class="statut" role="status" aria-live="polite"></p>
+      </div>
+    </section>
   </main>
-  <div id="audio"></div>
+
+  <div id="audio" aria-hidden="true"></div>
 
   <script src="langues.js"></script>
   <script src="config.js"></script>
+  <script src="plateforme.js"></script>
   <script src="app.js"></script>
+  <script type="module" src="fond3d.js"></script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("sw.js").catch(() => {});
+    }
+  </script>
 </body>
 </html>

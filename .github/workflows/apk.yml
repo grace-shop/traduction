@@ -1,0 +1,49 @@
+# Construit l'APK Android automatiquement (gratuit, sur les serveurs de GitHub).
+# Lancement : onglet Actions > « Construire l'APK Android » > Run workflow.
+# Le fichier app-debug.apk est disponible dans les résultats de l'exécution (Artifacts).
+name: Construire l'APK Android
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [version-navigateur]
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Installer les dépendances
+        run: npm install
+
+      - name: Créer le projet Android
+        run: npx cap add android
+
+      - name: Autoriser le micro et le son
+        run: |
+          sed -i 's#</manifest>#    <uses-permission android:name="android.permission.RECORD_AUDIO" />\n    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />\n</manifest>#' android/app/src/main/AndroidManifest.xml
+
+      - name: Copier le site dans l'application
+        run: npx cap sync android
+
+      - name: Construire l'APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Publier l'APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: appel-traduit-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk

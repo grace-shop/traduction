@@ -1,0 +1,8 @@
+{
+  "appId": "fr.appeltraduit.app",
+  "appName": "Appel traduit",
+  "webDir": "docs",
+  "android": {
+    "allowMixedContent": false
+  }
+}

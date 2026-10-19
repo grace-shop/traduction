@@ -47,6 +47,15 @@ function egalite(a, b) {
   return diff === 0;
 }
 
+// ORIGINE_AUTORISEE : liste séparée par des virgules, par exemple
+// https://grace-shop.github.io,https://localhost,capacitor://localhost
+// (https://localhost est l'origine de l'application Android, capacitor://localhost celle d'iOS).
+function origineAutorisee(origineDemandee, env) {
+  const autorisees = (env.ORIGINE_AUTORISEE || "").split(",").map((o) => o.trim()).filter(Boolean);
+  if (autorisees.includes(origineDemandee)) return origineDemandee;
+  return autorisees[0] || "null";
+}
+
 function reponse(corps, statut, origine) {
   return new Response(JSON.stringify(corps), {
     status: statut,
@@ -61,7 +70,7 @@ function reponse(corps, statut, origine) {
 
 export default {
   async fetch(request, env, ctx, maintenant = Math.floor(Date.now() / 1000)) {
-    const origine = env.ORIGINE_AUTORISEE || "*";
+    const origine = origineAutorisee(request.headers.get("Origin") || "", env);
     if (request.method === "OPTIONS") return reponse({}, 204, origine);
 
     const url = new URL(request.url);

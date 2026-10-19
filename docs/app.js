@@ -1,27 +1,36 @@
-// Appel traduit, version navigateur.
-// Chaque personne parle dans sa langue : la reconnaissance vocale tourne dans son navigateur,
-// le texte est envoyé aux autres via LiveKit, puis chacun le reçoit dans sa langue
-// (traduit et lu à voix haute si besoin).
+// Appel traduit : logique de l'appel.
+// Chacun parle dans sa langue. Le texte reconnu est envoyé aux autres via LiveKit ; chacun le
+// reçoit dans sa langue, traduit et lu à voix haute si nécessaire.
 const { Room, RoomEvent, createLocalAudioTrack } = LivekitClient;
 
 const encodeur = new TextEncoder();
 const decodeur = new TextDecoder();
 const SUJET_TEXTE = "texte";
 const LONGUEUR_MAX_TRADUCTION = 450; // MyMemory accepte des requêtes d'environ 500 caractères
-
-let room = null;
-let enAppel = false;
-let maLangue = null;        // code court, par exemple "fr"
-let maLangueBcp = null;     // étiquette navigateur, par exemple "fr-FR"
-let monIdentite = null;
-let reconnaissance = null;
-let paroleEnCours = 0;      // nombre de phrases traduites en cours de lecture
+const MAX_BULLES = 6;
 
 const $ = (id) => document.getElementById(id);
-const statut = (texte) => { $("statut").textContent = texte; };
-const trouverLangue = (code) => window.LANGUES.find((l) => l.code === code);
+const corps = document.body;
 
-// ---------- Langues et voix ----------
+let room = null;
+let micro = null;
+let maLangue = null;      // code court, par exemple "fr"
+let maLangueBcp = null;   // étiquette, par exemple "fr-FR"
+let monIdentite = null;
+let micActif = true;
+let analyseur = null;
+let contexteAudio = null;
+let fileLecture = [];
+let enLecture = false;
+
+// ---------- Affichage ----------
+
+function etat(texte) { $("statut").textContent = texte; }
+function etatAppel(texte) { $("etat").textContent = texte; }
+
+function allerVers(phase) { corps.dataset.phase = phase; }
+
+function trouverLangue(code) { return window.LANGUES.find((l) => l.code === code); }
 
 function remplirLangues() {
   const select = $("langue");
@@ -35,20 +44,15 @@ function remplirLangues() {
   remplirVoix();
 }
 
-function voixDisponibles(lang) {
-  const prefixe = lang.slice(0, 2).toLowerCase();
-  return speechSynthesis.getVoices().filter((v) => v.lang.toLowerCase().startsWith(prefixe));
-}
-
 function remplirVoix() {
   const select = $("voix");
   select.innerHTML = "";
   const langue = trouverLangue($("langue").value);
-  const voix = voixDisponibles(langue.bcp47);
+  const voix = Plateforme.voixes(langue.bcp47);
   if (!voix.length) {
     const option = document.createElement("option");
-    option.textContent = "Voix par défaut du navigateur";
     option.value = "";
+    option.textContent = Plateforme.natif() ? "Voix du téléphone" : "Voix par défaut";
     select.appendChild(option);
     return;
   }
@@ -60,10 +64,43 @@ function remplirVoix() {
   });
 }
 
-function voixChoisie(lang) {
-  const nom = $("voix").value;
-  const voix = speechSynthesis.getVoices();
-  return voix.find((v) => v.name === nom) || voixDisponibles(lang)[0] || null;
+function ajouterBulle(auteur, texte, moi) {
+  const conteneur = $("sous-titres");
+  const bulle = document.createElement("div");
+  bulle.className = "bulle" + (moi ? " moi" : "");
+  const nom = document.createElement("span");
+  nom.className = "auteur";
+  nom.textContent = auteur;
+  bulle.appendChild(nom);
+  bulle.appendChild(document.createTextNode(texte));
+  conteneur.appendChild(bulle);
+  while (conteneur.children.length > MAX_BULLES) conteneur.removeChild(conteneur.firstChild);
+  conteneur.scrollTop = conteneur.scrollHeight;
+}
+
+// Le cercle suit le niveau de ma voix : retour visuel que le micro fonctionne.
+function suivreNiveau(piste) {
+  try {
+    contexteAudio = new (window.AudioContext || window.webkitAudioContext)();
+    const source = contexteAudio.createMediaStreamSource(new MediaStream([piste.mediaStreamTrack]));
+    analyseur = contexteAudio.createAnalyser();
+    analyseur.fftSize = 256;
+    source.connect(analyseur);
+    const donnees = new Uint8Array(analyseur.fftSize);
+    const zone = $("zone-orbe");
+    const tick = () => {
+      if (!analyseur) return;
+      analyseur.getByteTimeDomainData(donnees);
+      let somme = 0;
+      for (const v of donnees) { const x = (v - 128) / 128; somme += x * x; }
+      const niveau = Math.min(1, Math.sqrt(somme / donnees.length) * 4);
+      zone.style.setProperty("--niveau", niveau.toFixed(3));
+      requestAnimationFrame(tick);
+    };
+    tick();
+  } catch {
+    // Pas d'analyse audio disponible : le cercle reste statique.
+  }
 }
 
 // ---------- Traduction ----------
@@ -81,9 +118,7 @@ function decouper(texte, taille) {
   return morceaux;
 }
 
-function codeMyMemory(code) {
-  return code === "zh" ? "zh-CN" : code;
-}
+function codeMyMemory(code) { return code === "zh" ? "zh-CN" : code; }
 
 async function traduire(texte, de, vers) {
   const paire = `${codeMyMemory(de)}|${codeMyMemory(vers)}`;
@@ -99,182 +134,173 @@ async function traduire(texte, de, vers) {
   return resultats.join(" ");
 }
 
-// ---------- Lecture à voix haute ----------
-
-function relancerReconnaissance() {
-  if (!enAppel || !reconnaissance || paroleEnCours > 0) return;
-  try { reconnaissance.start(); } catch { /* déjà démarrée */ }
+// Les traductions sont lues les unes après les autres, jamais en même temps.
+function lireEnFile(texte) {
+  fileLecture.push(texte);
+  if (!enLecture) lireSuivante();
 }
 
-function lire(texte, lang) {
-  if (!("speechSynthesis" in window)) return;
-  paroleEnCours += 1;
-  // Pendant que l'on parle, on coupe la reconnaissance pour ne pas réentendre la traduction.
-  if (reconnaissance) { try { reconnaissance.stop(); } catch { /* déjà arrêtée */ } }
-  const phrase = new SpeechSynthesisUtterance(texte);
-  phrase.lang = lang;
-  const voix = voixChoisie(lang);
-  if (voix) phrase.voice = voix;
-  const fin = () => { paroleEnCours = Math.max(0, paroleEnCours - 1); setTimeout(relancerReconnaissance, 300); };
-  phrase.onend = fin;
-  phrase.onerror = fin;
-  speechSynthesis.speak(phrase);
-}
-
-// ---------- Reconnaissance vocale (ce que je dis) ----------
-
-function demarrerReconnaissance() {
-  const RV = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!RV) {
-    statut("La reconnaissance vocale n'est pas disponible dans ce navigateur. Utilisez Chrome ou Edge.");
+function lireSuivante() {
+  if (!fileLecture.length) {
+    enLecture = false;
+    if (room && micActif) Plateforme.reprendreEcoute();
     return;
   }
-  reconnaissance = new RV();
-  reconnaissance.lang = maLangueBcp;
-  reconnaissance.continuous = true;
-  reconnaissance.interimResults = false;
-  reconnaissance.onresult = (evenement) => {
-    for (let i = evenement.resultIndex; i < evenement.results.length; i++) {
-      const resultat = evenement.results[i];
-      if (!resultat.isFinal) continue;
-      const texte = resultat[0].transcript.trim();
-      if (texte) envoyerTexte(texte);
-    }
-  };
-  reconnaissance.onend = () => { setTimeout(relancerReconnaissance, 300); };
-  reconnaissance.onerror = (evenement) => {
-    if (evenement.error === "not-allowed") statut("Le micro est refusé. Autorisez-le dans le navigateur.");
-  };
-  relancerReconnaissance();
+  enLecture = true;
+  Plateforme.suspendreEcoute();
+  const texte = fileLecture.shift();
+  Plateforme.parler(texte, maLangueBcp, $("voix").value, lireSuivante);
 }
+
+// ---------- Messages ----------
 
 function envoyerTexte(texte) {
+  if (!room) return;
   const charge = encodeur.encode(JSON.stringify({ langue: maLangue, auteur: monIdentite, texte }));
   room.localParticipant.publishData(charge, { reliable: true, topic: SUJET_TEXTE })
-    .catch(() => statut("Message non envoyé. Vérifiez votre connexion."));
-  afficherSousTitre(monIdentite, texte);
+    .catch(() => etatAppel("Message non envoyé. Vérifiez votre connexion."));
+  ajouterBulle(monIdentite, texte, true);
 }
-
-// ---------- Réception ----------
 
 function recevoirTexte(donnees, participant) {
   let message;
   try { message = JSON.parse(decodeur.decode(donnees)); } catch { return; }
   const auteur = participant ? participant.identity : message.auteur;
   if (message.langue === maLangue) {
-    afficherSousTitre(auteur, message.texte);
+    ajouterBulle(auteur, message.texte, false);
     return;
   }
   traduire(message.texte, message.langue, maLangue)
     .then((traduit) => {
-      afficherSousTitre(auteur, traduit);
-      lire(traduit, maLangueBcp);
+      ajouterBulle(auteur, traduit, false);
+      lireEnFile(traduit);
     })
-    .catch(() => afficherSousTitre(auteur, `${message.texte} (traduction indisponible)`));
+    .catch(() => ajouterBulle(auteur, `${message.texte} (traduction indisponible)`, false));
 }
-
-function afficherSousTitre(auteur, texte) {
-  const conteneur = $("sous-titres");
-  const ligne = document.createElement("p");
-  const nom = document.createElement("span");
-  nom.className = "auteur";
-  nom.textContent = auteur + " : ";
-  ligne.appendChild(nom);
-  ligne.appendChild(document.createTextNode(texte));
-  conteneur.appendChild(ligne);
-  while (conteneur.children.length > 4) conteneur.removeChild(conteneur.firstChild);
-}
-
-// ---------- Appel ----------
 
 function metadonneesDuParticipant(participant) {
   try { return JSON.parse(participant.metadata || "{}"); } catch { return {}; }
 }
 
+// ---------- Appel ----------
+
 async function rejoindre() {
   const nom = $("nom").value.trim();
   const salle = $("salle").value.trim();
   const motdepasse = $("motdepasse").value;
-  if (!nom || !salle) { statut("Renseignez votre nom et la salle."); return; }
-  if (!motdepasse) { statut("Saisissez le mot de passe de l'appel."); return; }
+  if (!nom || !salle) { etat("Renseignez votre nom et la salle."); return; }
+  if (!motdepasse) { etat("Saisissez le mot de passe de l'appel."); return; }
   if (!$("consentement").checked) {
-    statut("Vous devez accepter le traitement de votre voix pour rejoindre l'appel.");
+    etat("Acceptez le traitement de votre voix pour rejoindre l'appel.");
     return;
   }
+  if (!Plateforme.disponible()) {
+    etat("La reconnaissance vocale n'est pas disponible sur cet appareil. Utilisez Chrome ou Edge.");
+    return;
+  }
+
+  $("rejoindre").disabled = true;
+  etat("Connexion...");
+
+  const permission = await Plateforme.demanderPermissions();
+  if (!permission) {
+    etat("Le micro est refusé. Autorisez-le dans les réglages de l'appareil.");
+    $("rejoindre").disabled = false;
+    return;
+  }
+
   maLangue = $("langue").value;
   maLangueBcp = trouverLangue(maLangue).bcp47;
   monIdentite = nom;
 
-  statut("Connexion...");
   const reponse = await fetch(
     `${window.CONFIG.TOKEN_URL}?identite=${encodeURIComponent(nom)}&salle=${encodeURIComponent(salle)}` +
     `&langue=${encodeURIComponent(maLangue)}&motdepasse=${encodeURIComponent(motdepasse)}`
   );
-  if (reponse.status === 401) { statut("Mot de passe incorrect."); return; }
-  if (!reponse.ok) { statut("Erreur : " + (await reponse.text())); return; }
+  if (reponse.status === 401) { etat("Mot de passe incorrect."); $("rejoindre").disabled = false; return; }
+  if (!reponse.ok) { etat("Erreur : " + (await reponse.text())); $("rejoindre").disabled = false; return; }
   const { token, url } = await reponse.json();
 
   room = new Room();
-
-  // Je n'entends le son original que des personnes qui parlent ma langue.
-  room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
-    if (track.kind !== "audio") return;
+  room.on(RoomEvent.TrackSubscribed, (piste, publication, participant) => {
+    if (piste.kind !== "audio") return;
     if (metadonneesDuParticipant(participant).langue === maLangue) {
-      $("audio").appendChild(track.attach());
+      $("audio").appendChild(piste.attach());
     }
   });
-  room.on(RoomEvent.TrackUnsubscribed, (track) => {
-    track.detach().forEach((el) => el.remove());
-  });
+  room.on(RoomEvent.TrackUnsubscribed, (piste) => piste.detach().forEach((el) => el.remove()));
   room.on(RoomEvent.DataReceived, (payload, participant, kind, topic) => {
     if (topic === SUJET_TEXTE) recevoirTexte(payload, participant);
   });
-  room.on(RoomEvent.Disconnected, () => {
-    arreterTout();
-    statut("Appel terminé.");
-  });
+  room.on(RoomEvent.Disconnected, () => nettoyer("Appel terminé."));
 
-  await room.connect(url, token);
-  const micro = await createLocalAudioTrack();
-  await room.localParticipant.publishTrack(micro);
+  try {
+    await room.connect(url, token);
+    micro = await createLocalAudioTrack();
+    await room.localParticipant.publishTrack(micro);
+  } catch {
+    nettoyer("Connexion impossible. Vérifiez votre réseau et réessayez.");
+    return;
+  }
 
-  enAppel = true;
-  $("rejoindre").disabled = true;
-  $("quitter").disabled = false;
-  $("langue").disabled = true;
-  $("voix").disabled = true;
+  suivreNiveau(micro);
+  $("nom-salle").textContent = salle;
   $("motdepasse").value = "";
-  statut(`Connecté à « ${salle} » en ${maLangue}. Parlez : les autres entendront votre message dans leur langue.`);
-  demarrerReconnaissance();
+  micActif = true;
+  $("micro").setAttribute("aria-pressed", "false");
+  $("micro-libelle").textContent = "Micro";
+  $("zone-orbe").classList.remove("muet");
+  allerVers("appel");
+  etatAppel("Parlez : les autres entendront votre message dans leur langue.");
+
+  Plateforme.demarrerEcoute(maLangueBcp, envoyerTexte).catch(() => {
+    etatAppel("La reconnaissance vocale s'est arrêtée.");
+  });
 }
 
-function arreterTout() {
-  enAppel = false;
-  if (reconnaissance) { try { reconnaissance.stop(); } catch { /* déjà arrêtée */ } }
-  if ("speechSynthesis" in window) speechSynthesis.cancel();
-  paroleEnCours = 0;
+function basculerMicro() {
+  if (!micro) return;
+  micActif = !micActif;
+  if (micActif) {
+    micro.unmute();
+    if (!enLecture) Plateforme.reprendreEcoute();
+  } else {
+    micro.mute();
+    Plateforme.suspendreEcoute();
+  }
+  $("micro").setAttribute("aria-pressed", String(!micActif));
+  $("micro-libelle").textContent = micActif ? "Micro" : "Réactiver";
+  $("zone-orbe").classList.toggle("muet", !micActif);
+  etatAppel(micActif ? "Micro activé." : "Micro coupé : les autres ne vous entendent plus.");
+}
+
+function nettoyer(message) {
+  Plateforme.arreterEcoute();
+  Plateforme.arreterLecture();
+  fileLecture = [];
+  enLecture = false;
+  if (contexteAudio) { contexteAudio.close().catch(() => {}); contexteAudio = null; }
+  analyseur = null;
+  $("zone-orbe").style.removeProperty("--niveau");
   $("audio").innerHTML = "";
   $("sous-titres").innerHTML = "";
+  if (room) { room.removeAllListeners(); room = null; }
+  micro = null;
   $("rejoindre").disabled = false;
-  $("quitter").disabled = true;
-  $("langue").disabled = false;
-  $("voix").disabled = false;
+  allerVers("accueil");
+  etat(message);
 }
 
 function quitter() {
   if (room) room.disconnect();
+  else nettoyer("");
 }
 
 // ---------- Démarrage ----------
 
 remplirLangues();
-if ("speechSynthesis" in window) {
-  speechSynthesis.onvoiceschanged = remplirVoix;
-}
+if ("speechSynthesis" in window) speechSynthesis.onvoiceschanged = remplirVoix;
 $("langue").addEventListener("change", remplirVoix);
 $("rejoindre").addEventListener("click", rejoindre);
 $("quitter").addEventListener("click", quitter);
-
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("sw.js").catch(() => {});
-}
+$("micro").addEventListener("click", basculerMicro);
