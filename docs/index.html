@@ -10,7 +10,7 @@
   <meta name="apple-mobile-web-app-title" content="Appel traduit">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icone.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="icone.svg">
+  <link rel="apple-touch-icon" href="icone-512.png">
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
 </head>
@@ -59,7 +59,7 @@
 
         <label class="consentement">
           <input id="consentement" type="checkbox">
-          <span>J'accepte que ma voix soit reconnue par mon appareil, et que le texte soit traduit par un service tiers, pour cet appel uniquement.</span>
+          <span>J'accepte que ma voix soit reconnue par mon appareil, et que le texte soit traduit par un service tiers, pour cet appel uniquement. <a href="confidentialite.html" target="_blank" rel="noopener">Voir la politique de confidentialité</a>.</span>
         </label>
 
         <button id="rejoindre" class="bouton" type="button">Rejoindre l'appel</button>
@@ -72,6 +72,14 @@
         <div class="barre">
           <p class="salle" id="nom-salle"></p>
           <span class="pastille">En direct</span>
+        </div>
+
+        <ul class="participants" id="participants" aria-label="Participants"></ul>
+        <div class="ligne-langue">
+          <span id="compteur" class="compteur"></span>
+          <label class="langue-appel"><span>Ma langue</span>
+            <select id="langue-appel" aria-label="Changer ma langue"></select>
+          </label>
         </div>
 
         <div class="orbe-zone" id="zone-orbe" aria-hidden="true">
@@ -101,6 +109,7 @@
 
   <script src="langues.js"></script>
   <script src="config.js"></script>
+  <script src="outils.js"></script>
   <script src="plateforme.js"></script>
   <script src="app.js"></script>
   <script type="module" src="fond3d.js"></script>

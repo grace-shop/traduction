@@ -6,6 +6,7 @@ const { Room, RoomEvent, createLocalAudioTrack } = LivekitClient;
 const encodeur = new TextEncoder();
 const decodeur = new TextDecoder();
 const SUJET_TEXTE = "texte";
+const SUJET_LANGUE = "langue";
 const LONGUEUR_MAX_TRADUCTION = 450; // MyMemory accepte des requêtes d'environ 500 caractères
 const MAX_BULLES = 6;
 
@@ -14,33 +15,37 @@ const corps = document.body;
 
 let room = null;
 let micro = null;
-let maLangue = null;      // code court, par exemple "fr"
-let maLangueBcp = null;   // étiquette, par exemple "fr-FR"
+let maLangue = null;       // code court, par exemple "fr"
+let maLangueBcp = null;    // étiquette, par exemple "fr-FR"
 let monIdentite = null;
 let micActif = true;
 let analyseur = null;
 let contexteAudio = null;
 let fileLecture = [];
 let enLecture = false;
+let quotaAtteint = false;
+const langues = new Map(); // identité -> code de langue, pour chaque participant distant
 
 // ---------- Affichage ----------
 
 function etat(texte) { $("statut").textContent = texte; }
 function etatAppel(texte) { $("etat").textContent = texte; }
-
 function allerVers(phase) { corps.dataset.phase = phase; }
-
 function trouverLangue(code) { return window.LANGUES.find((l) => l.code === code); }
 
-function remplirLangues() {
-  const select = $("langue");
+function remplirSelectLangues(select, valeur) {
+  select.innerHTML = "";
   window.LANGUES.forEach(({ code, nom }) => {
     const option = document.createElement("option");
     option.value = code;
     option.textContent = nom;
     select.appendChild(option);
   });
-  select.value = "fr";
+  select.value = valeur;
+}
+
+function remplirLangues() {
+  remplirSelectLangues($("langue"), "fr");
   remplirVoix();
 }
 
@@ -62,6 +67,23 @@ function remplirVoix() {
     option.textContent = `${v.name} (${v.lang})`;
     select.appendChild(option);
   });
+}
+
+// Liste des participants : moi et les autres, avec leur langue.
+function rafraichirParticipants() {
+  const liste = $("participants");
+  liste.innerHTML = "";
+  const ajouter = (nom, code, moi) => {
+    const pastille = document.createElement("li");
+    pastille.className = "chip" + (moi ? " moi" : "");
+    pastille.textContent = `${nom} · ${trouverLangue(code)?.nom || code}`;
+    liste.appendChild(pastille);
+  };
+  if (monIdentite) ajouter(monIdentite, maLangue, true);
+  if (room) {
+    room.remoteParticipants.forEach((p) => ajouter(p.identity, langues.get(p.identity) || "?", false));
+  }
+  $("compteur").textContent = `${liste.children.length} participant${liste.children.length > 1 ? "s" : ""}`;
 }
 
 function ajouterBulle(auteur, texte, moi) {
@@ -105,33 +127,28 @@ function suivreNiveau(piste) {
 
 // ---------- Traduction ----------
 
-function decouper(texte, taille) {
-  const morceaux = [];
-  let reste = texte.trim();
-  while (reste.length > taille) {
-    let coupe = reste.lastIndexOf(" ", taille);
-    if (coupe <= 0) coupe = taille;
-    morceaux.push(reste.slice(0, coupe));
-    reste = reste.slice(coupe).trim();
-  }
-  if (reste) morceaux.push(reste);
-  return morceaux;
-}
-
-function codeMyMemory(code) { return code === "zh" ? "zh-CN" : code; }
-
 async function traduire(texte, de, vers) {
-  const paire = `${codeMyMemory(de)}|${codeMyMemory(vers)}`;
+  const cle = Outils.cleCache(texte, de, vers);
+  const dejaFait = Outils.lireCache(cle);
+  if (dejaFait) return dejaFait;
+
   const resultats = [];
-  for (const morceau of decouper(texte, LONGUEUR_MAX_TRADUCTION)) {
-    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(morceau)}&langpair=${encodeURIComponent(paire)}`;
+  for (const morceau of Outils.decouper(texte, LONGUEUR_MAX_TRADUCTION)) {
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(morceau)}` +
+      `&langpair=${encodeURIComponent(Outils.paireMyMemory(de, vers))}`;
     const reponse = await fetch(url);
-    if (!reponse.ok) throw new Error("Service de traduction indisponible");
+    if (!reponse.ok) throw new Error("indisponible");
     const donnees = await reponse.json();
-    if (donnees.responseStatus !== 200) throw new Error(donnees.responseDetails || "Traduction refusée");
+    if (donnees.responseStatus !== 200) {
+      const detail = String(donnees.responseDetails || "");
+      if (/QUOTA|LIMIT/i.test(detail)) throw new Error("quota");
+      throw new Error("refusee");
+    }
     resultats.push(donnees.responseData.translatedText);
   }
-  return resultats.join(" ");
+  const traduit = resultats.join(" ");
+  Outils.memoriser(cle, traduit);
+  return traduit;
 }
 
 // Les traductions sont lues les unes après les autres, jamais en même temps.
@@ -163,9 +180,9 @@ function envoyerTexte(texte) {
 }
 
 function recevoirTexte(donnees, participant) {
-  let message;
-  try { message = JSON.parse(decodeur.decode(donnees)); } catch { return; }
-  const auteur = participant ? participant.identity : message.auteur;
+  const message = Outils.lireMessage(decodeur.decode(donnees));
+  if (!message) return;
+  const auteur = participant ? participant.identity : "Participant";
   if (message.langue === maLangue) {
     ajouterBulle(auteur, message.texte, false);
     return;
@@ -175,11 +192,34 @@ function recevoirTexte(donnees, participant) {
       ajouterBulle(auteur, traduit, false);
       lireEnFile(traduit);
     })
-    .catch(() => ajouterBulle(auteur, `${message.texte} (traduction indisponible)`, false));
+    .catch((erreur) => {
+      if (erreur.message === "quota") {
+        if (!quotaAtteint) etatAppel("Quota de traduction atteint pour aujourd'hui : les messages ne sont plus traduits.");
+        quotaAtteint = true;
+      }
+      ajouterBulle(auteur, `${message.texte} (traduction indisponible)`, false);
+    });
 }
 
-function metadonneesDuParticipant(participant) {
-  try { return JSON.parse(participant.metadata || "{}"); } catch { return {}; }
+// Je n'entends le son original que des personnes qui parlent ma langue.
+function appliquerAudio() {
+  const conteneur = $("audio");
+  conteneur.innerHTML = "";
+  if (!room) return;
+  room.remoteParticipants.forEach((p) => {
+    if (langues.get(p.identity) !== maLangue) return;
+    for (const publication of p.audioTrackPublications.values()) {
+      if (publication.track) conteneur.appendChild(publication.track.attach());
+    }
+  });
+}
+
+function memoriserLangue(participant) {
+  if (langues.has(participant.identity)) return;
+  try {
+    const meta = JSON.parse(participant.metadata || "{}");
+    if (meta.langue) langues.set(participant.identity, meta.langue);
+  } catch { /* métadonnées absentes : la langue sera connue au premier message */ }
 }
 
 // ---------- Appel ----------
@@ -212,26 +252,57 @@ async function rejoindre() {
   maLangue = $("langue").value;
   maLangueBcp = trouverLangue(maLangue).bcp47;
   monIdentite = nom;
+  quotaAtteint = false;
 
-  const reponse = await fetch(
-    `${window.CONFIG.TOKEN_URL}?identite=${encodeURIComponent(nom)}&salle=${encodeURIComponent(salle)}` +
-    `&langue=${encodeURIComponent(maLangue)}&motdepasse=${encodeURIComponent(motdepasse)}`
-  );
+  // Le mot de passe part dans le corps de la requête, jamais dans l'adresse.
+  let reponse;
+  try {
+    reponse = await fetch(window.CONFIG.TOKEN_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ identite: nom, salle, langue: maLangue, motdepasse }),
+    });
+  } catch {
+    etat("Impossible de joindre le serveur. Vérifiez votre connexion.");
+    $("rejoindre").disabled = false;
+    return;
+  }
   if (reponse.status === 401) { etat("Mot de passe incorrect."); $("rejoindre").disabled = false; return; }
-  if (!reponse.ok) { etat("Erreur : " + (await reponse.text())); $("rejoindre").disabled = false; return; }
+  if (reponse.status === 429) { etat("Trop de tentatives. Réessayez dans quelques minutes."); $("rejoindre").disabled = false; return; }
+  if (!reponse.ok) { etat("Erreur de connexion au serveur."); $("rejoindre").disabled = false; return; }
   const { token, url } = await reponse.json();
 
   room = new Room();
   room.on(RoomEvent.TrackSubscribed, (piste, publication, participant) => {
     if (piste.kind !== "audio") return;
-    if (metadonneesDuParticipant(participant).langue === maLangue) {
-      $("audio").appendChild(piste.attach());
+    memoriserLangue(participant);
+    appliquerAudio();
+  });
+  room.on(RoomEvent.TrackUnsubscribed, () => appliquerAudio());
+  room.on(RoomEvent.ParticipantConnected, (participant) => {
+    memoriserLangue(participant);
+    rafraichirParticipants();
+    etatAppel(`${participant.identity} a rejoint l'appel.`);
+  });
+  room.on(RoomEvent.ParticipantDisconnected, (participant) => {
+    langues.delete(participant.identity);
+    rafraichirParticipants();
+    etatAppel(`${participant.identity} a quitté l'appel.`);
+  });
+  room.on(RoomEvent.DataReceived, (payload, participant, kind, topic) => {
+    if (topic === SUJET_TEXTE) {
+      recevoirTexte(payload, participant);
+    } else if (topic === SUJET_LANGUE && participant) {
+      const message = Outils.lireMessage(decodeur.decode(payload));
+      if (message) {
+        langues.set(participant.identity, message.langue);
+        appliquerAudio();
+        rafraichirParticipants();
+      }
     }
   });
-  room.on(RoomEvent.TrackUnsubscribed, (piste) => piste.detach().forEach((el) => el.remove()));
-  room.on(RoomEvent.DataReceived, (payload, participant, kind, topic) => {
-    if (topic === SUJET_TEXTE) recevoirTexte(payload, participant);
-  });
+  room.on(RoomEvent.Reconnecting, () => etatAppel("Connexion instable : reconnexion en cours..."));
+  room.on(RoomEvent.Reconnected, () => etatAppel("Reconnecté."));
   room.on(RoomEvent.Disconnected, () => nettoyer("Appel terminé."));
 
   try {
@@ -243,19 +314,39 @@ async function rejoindre() {
     return;
   }
 
+  langues.set(monIdentite, maLangue);
+  room.remoteParticipants.forEach((p) => memoriserLangue(p));
   suivreNiveau(micro);
   $("nom-salle").textContent = salle;
   $("motdepasse").value = "";
+  $("langue-appel").value = maLangue;
   micActif = true;
   $("micro").setAttribute("aria-pressed", "false");
   $("micro-libelle").textContent = "Micro";
   $("zone-orbe").classList.remove("muet");
   allerVers("appel");
   etatAppel("Parlez : les autres entendront votre message dans leur langue.");
+  rafraichirParticipants();
+  appliquerAudio();
 
   Plateforme.demarrerEcoute(maLangueBcp, envoyerTexte).catch(() => {
     etatAppel("La reconnaissance vocale s'est arrêtée.");
   });
+}
+
+// Changer de langue pendant l'appel : les autres en sont informés.
+function changerLangue(nouvelle) {
+  if (!room || nouvelle === maLangue) return;
+  maLangue = nouvelle;
+  maLangueBcp = trouverLangue(nouvelle).bcp47;
+  langues.set(monIdentite, nouvelle);
+  const charge = encodeur.encode(JSON.stringify({ langue: nouvelle }));
+  room.localParticipant.publishData(charge, { reliable: true, topic: SUJET_LANGUE }).catch(() => {});
+  Plateforme.arreterEcoute();
+  if (micActif) Plateforme.demarrerEcoute(maLangueBcp, envoyerTexte);
+  appliquerAudio();
+  rafraichirParticipants();
+  etatAppel(`Votre langue est maintenant : ${trouverLangue(nouvelle).nom}.`);
 }
 
 function basculerMicro() {
@@ -281,9 +372,11 @@ function nettoyer(message) {
   enLecture = false;
   if (contexteAudio) { contexteAudio.close().catch(() => {}); contexteAudio = null; }
   analyseur = null;
+  langues.clear();
   $("zone-orbe").style.removeProperty("--niveau");
   $("audio").innerHTML = "";
   $("sous-titres").innerHTML = "";
+  $("participants").innerHTML = "";
   if (room) { room.removeAllListeners(); room = null; }
   micro = null;
   $("rejoindre").disabled = false;
@@ -299,8 +392,10 @@ function quitter() {
 // ---------- Démarrage ----------
 
 remplirLangues();
+remplirSelectLangues($("langue-appel"), "fr");
 if ("speechSynthesis" in window) speechSynthesis.onvoiceschanged = remplirVoix;
 $("langue").addEventListener("change", remplirVoix);
+$("langue-appel").addEventListener("change", (e) => changerLangue(e.target.value));
 $("rejoindre").addEventListener("click", rejoindre);
 $("quitter").addEventListener("click", quitter);
 $("micro").addEventListener("click", basculerMicro);

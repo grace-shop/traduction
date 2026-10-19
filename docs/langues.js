@@ -1,6 +1,6 @@
 // Langues proposées dans l'application.
 // code : langue courte, utilisée pour la traduction et les métadonnées.
-// bcp47 : étiquette utilisée par le navigateur pour la reconnaissance et la voix.
+// bcp47 : étiquette utilisée par le navigateur (reconnaissance) et par la lecture (voix).
 window.LANGUES = [
   { code: "fr", bcp47: "fr-FR", nom: "Français" },
   { code: "en", bcp47: "en-US", nom: "English" },
@@ -10,13 +10,28 @@ window.LANGUES = [
   { code: "pt", bcp47: "pt-PT", nom: "Português" },
   { code: "nl", bcp47: "nl-NL", nom: "Nederlands" },
   { code: "pl", bcp47: "pl-PL", nom: "Polski" },
+  { code: "ro", bcp47: "ro-RO", nom: "Română" },
+  { code: "cs", bcp47: "cs-CZ", nom: "Čeština" },
+  { code: "sk", bcp47: "sk-SK", nom: "Slovenčina" },
+  { code: "hu", bcp47: "hu-HU", nom: "Magyar" },
+  { code: "bg", bcp47: "bg-BG", nom: "Български" },
+  { code: "el", bcp47: "el-GR", nom: "Ελληνικά" },
   { code: "sv", bcp47: "sv-SE", nom: "Svenska" },
+  { code: "da", bcp47: "da-DK", nom: "Dansk" },
+  { code: "fi", bcp47: "fi-FI", nom: "Suomi" },
+  { code: "ca", bcp47: "ca-ES", nom: "Català" },
   { code: "tr", bcp47: "tr-TR", nom: "Türkçe" },
   { code: "ru", bcp47: "ru-RU", nom: "Русский" },
   { code: "uk", bcp47: "uk-UA", nom: "Українська" },
   { code: "ar", bcp47: "ar-SA", nom: "العربية" },
+  { code: "he", bcp47: "he-IL", nom: "עברית" },
+  { code: "fa", bcp47: "fa-IR", nom: "فارسی" },
   { code: "hi", bcp47: "hi-IN", nom: "हिन्दी" },
+  { code: "bn", bcp47: "bn-BD", nom: "বাংলা" },
+  { code: "ta", bcp47: "ta-IN", nom: "தமிழ்" },
+  { code: "ur", bcp47: "ur-PK", nom: "اردو" },
   { code: "id", bcp47: "id-ID", nom: "Bahasa Indonesia" },
+  { code: "ms", bcp47: "ms-MY", nom: "Bahasa Melayu" },
   { code: "vi", bcp47: "vi-VN", nom: "Tiếng Việt" },
   { code: "th", bcp47: "th-TH", nom: "ไทย" },
   { code: "zh", bcp47: "zh-CN", nom: "中文" },

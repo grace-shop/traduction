@@ -62,10 +62,30 @@ function reponse(corps, statut, origine) {
     headers: {
       "Content-Type": "application/json",
       "Access-Control-Allow-Origin": origine,
-      "Access-Control-Allow-Methods": "GET, OPTIONS",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type",
     },
   });
+}
+
+// Freinage des tentatives : après 8 mots de passe faux depuis une même adresse, refus pendant 15 minutes.
+// Le cache de Cloudflare est local à chaque datacenter : c'est un frein, pas une garantie.
+// La vraie protection est la règle de limitation de débit à configurer dans Cloudflare (voir README).
+const ECHECS_MAX = 8;
+const DUREE_BLOCAGE_S = 900;
+
+async function echecsDepuis(ip) {
+  if (typeof caches === "undefined" || !caches.default) return 0;
+  const reponseCache = await caches.default.match(new Request("https://limite.interne/" + encodeURIComponent(ip)));
+  return reponseCache ? Number(await reponseCache.text()) : 0;
+}
+
+async function enregistrerEchec(ip, compte) {
+  if (typeof caches === "undefined" || !caches.default) return;
+  await caches.default.put(
+    new Request("https://limite.interne/" + encodeURIComponent(ip)),
+    new Response(String(compte), { headers: { "Cache-Control": `max-age=${DUREE_BLOCAGE_S}` } })
+  );
 }
 
 export default {
@@ -74,7 +94,7 @@ export default {
     if (request.method === "OPTIONS") return reponse({}, 204, origine);
 
     const url = new URL(request.url);
-    if (url.pathname !== "/token" || request.method !== "GET") {
+    if (url.pathname !== "/token" || request.method !== "POST") {
       return reponse({ erreur: "Introuvable" }, 404, origine);
     }
 
@@ -82,13 +102,20 @@ export default {
       return reponse({ erreur: "Configuration manquante" }, 500, origine);
     }
 
-    const p = url.searchParams;
-    const identite = (p.get("identite") || "").trim();
-    const salle = (p.get("salle") || "").trim();
-    const langue = p.get("langue") || "";
-    const motdepasse = p.get("motdepasse") || "";
+    let corps;
+    try { corps = await request.json(); } catch { return reponse({ erreur: "Requête invalide" }, 400, origine); }
+    const identite = String(corps.identite || "").trim();
+    const salle = String(corps.salle || "").trim();
+    const langue = String(corps.langue || "");
+    const motdepasse = String(corps.motdepasse || "");
+
+    const ip = request.headers.get("CF-Connecting-IP") || "inconnue";
+    if ((await echecsDepuis(ip)) >= ECHECS_MAX) {
+      return reponse({ erreur: "Trop de tentatives. Réessayez dans quelques minutes." }, 429, origine);
+    }
 
     if (!egalite(env.MOT_DE_PASSE_APPEL, motdepasse)) {
+      await enregistrerEchec(ip, (await echecsDepuis(ip)) + 1);
       return reponse({ erreur: "Mot de passe incorrect" }, 401, origine);
     }
     if (!identite || identite.length > 64 || !salle || salle.length > 64) {

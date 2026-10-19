@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Politique de confidentialité : Appel traduit</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { display: block; }
+    .texte { max-width: 760px; margin: 0 auto; padding: 32px 20px 60px; line-height: 1.6; }
+    .texte h1 { font-size: 1.6rem; margin: 0 0 8px; }
+    .texte h2 { font-size: 1.1rem; margin: 28px 0 8px; color: var(--accent); }
+    .texte p, .texte li { color: #d8dded; font-size: .95rem; }
+    .texte .a-completer { background: rgba(251, 113, 133, .15); padding: 0 4px; border-radius: 4px; }
+    .retour { display: inline-block; margin-bottom: 18px; font-size: .9rem; }
+  </style>
+</head>
+<body>
+  <main class="texte">
+    <a class="retour" href="index.html">← Retour à l'appel</a>
+    <h1>Politique de confidentialité</h1>
+    <p>Dernière mise à jour : <span class="a-completer">[date]</span></p>
+
+    <h2>Qui est responsable</h2>
+    <p>Cette application est éditée par <span class="a-completer">[nom ou raison sociale]</span>.
+    Contact : <span class="a-completer">[adresse électronique]</span>.</p>
+
+    <h2>Ce que fait l'application</h2>
+    <p>Appel traduit permet à des personnes qui parlent des langues différentes de se parler : chacun
+    parle dans sa langue, et les autres reçoivent le message traduit et lu à voix haute, avec des sous-titres.</p>
+
+    <h2>Les données traitées pendant un appel</h2>
+    <ul>
+      <li><strong>Votre voix</strong> : elle est reconnue par le moteur de reconnaissance vocale de votre appareil
+      (navigateur ou téléphone). Selon l'appareil et le navigateur, ce moteur peut envoyer l'audio à un fournisseur
+      (par exemple Google dans Chrome). L'application n'enregistre pas votre voix.</li>
+      <li><strong>Le texte reconnu</strong> : il est envoyé aux autres participants de l'appel, via LiveKit
+      (<span class="a-completer">hébergement choisi</span>), puis traduit par le service MyMemory si la langue
+      de l'auditeur est différente.</li>
+      <li><strong>Votre nom affiché et le nom de la salle</strong> : ils sont visibles des autres participants
+      de la salle.</li>
+      <li><strong>Votre langue et la voix de lecture choisies</strong> : elles ne sont conservées que pendant l'appel.</li>
+      <li><strong>Données techniques</strong> : pour obtenir l'accès à l'appel, une adresse IP et l'heure de la
+      demande sont traitées par le service qui délivre les accès (Cloudflare Workers), notamment pour limiter les
+      tentatives répétées.</li>
+    </ul>
+
+    <h2>Ce que l'application ne fait pas</h2>
+    <ul>
+      <li>Elle n'enregistre pas l'audio de vos appels.</li>
+      <li>Elle ne conserve pas le texte des messages après l'appel.</li>
+      <li>Elle n'utilise pas de compte utilisateur, et n'a pas de publicité ni de suivi publicitaire.</li>
+    </ul>
+
+    <h2>Base légale</h2>
+    <p>Le traitement repose sur votre consentement, donné à chaque appel par la case à cocher. Vous pouvez le retirer
+    à tout moment en quittant l'appel et en ne le rejoignant plus.</p>
+
+    <h2>Services tiers et transferts hors de l'Union européenne</h2>
+    <ul>
+      <li>LiveKit (transmission audio et messages), Cloudflare (accès à l'appel), MyMemory (traduction),
+      et le moteur de reconnaissance et de lecture de votre appareil.</li>
+      <li>Certains de ces services sont hébergés hors de l'Union européenne. Ils garantissent un niveau de protection
+      encadré par les mécanismes prévus par le RGPD. <span class="a-completer">[à vérifier avant publication]</span></li>
+    </ul>
+
+    <h2>Durée de conservation</h2>
+    <p>L'application ne conserve aucune donnée de vos appels après leur fin. Les journaux techniques du service
+    d'accès sont conservés selon la politique du fournisseur (<span class="a-completer">durée à préciser</span>).</p>
+
+    <h2>Vos droits</h2>
+    <p>Vous pouvez demander l'accès, la rectification ou l'effacement des données vous concernant, et vous opposer
+    à leur traitement, en écrivant à <span class="a-completer">[adresse électronique]</span>. Vous pouvez aussi
+    saisir la CNIL (www.cnil.fr).</p>
+
+    <h2>Sécurité</h2>
+    <p>Les échanges passent par une connexion chiffrée (HTTPS et WebRTC). L'accès à un appel est protégé par un mot de
+    passe, que seuls les participants doivent connaître.</p>
+
+    <p class="a-completer">Ce document doit être relu par une personne compétente en droit des données avant toute publication.</p>
+  </main>
+</body>
+</html>

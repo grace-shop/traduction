@@ -12,9 +12,16 @@ const env = {
 };
 const maintenant = 1800000000;
 
-function appel(query, origine = "https://exemple.github.io") {
-  return worker.fetch(new Request("https://jetons.test/token?" + query, { headers: { Origin: origine } }), env, {}, maintenant);
+// Requête POST au format de l'application.
+function appel(corps, { origine = "https://exemple.github.io", ip = "10.0.0.1", env: e = env } = {}) {
+  const requete = new Request("https://jetons.test/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Origin: origine, "CF-Connecting-IP": ip },
+    body: JSON.stringify(corps),
+  });
+  return worker.fetch(requete, e, {}, maintenant);
 }
+
 function decoder(jeton) {
   const [entete, charge, signature] = jeton.split(".");
   const b64 = (s) => Buffer.from(s, "base64url");
@@ -26,9 +33,10 @@ function decoder(jeton) {
   };
 }
 
-const bon = "identite=Ami&salle=reunion&langue=fr&motdepasse=mot-de-passe-test";
+const bon = { identite: "Ami", salle: "reunion", langue: "fr", motdepasse: "mot-de-passe-test" };
+let groupes = 0;
 
-// 1. Un jeton valide est délivré, signé avec le secret, et contient les bons droits.
+// 1. Un jeton valide est délivré, signé, avec les bons droits.
 {
   const r = await appel(bon);
   assert.equal(r.status, 200);
@@ -37,51 +45,55 @@ const bon = "identite=Ami&salle=reunion&langue=fr&motdepasse=mot-de-passe-test";
   assert.equal(url, env.LIVEKIT_URL);
   const d = decoder(token);
   assert.equal(d.entete.alg, "HS256");
-  assert.equal(d.signatureValide, true, "la signature doit être vérifiable avec le secret");
+  assert.equal(d.signatureValide, true);
   assert.equal(d.charge.iss, "APIcle123");
   assert.equal(d.charge.sub, "Ami");
   assert.deepEqual(d.charge.video, { roomJoin: true, room: "reunion" });
   assert.deepEqual(JSON.parse(d.charge.metadata), { langue: "fr" });
   assert.equal(d.charge.exp, maintenant + 3600);
+  groupes++;
 }
 
-// 1bis. L'application Android (origine https://localhost) est acceptée, une origine inconnue ne l'est pas.
+// 2. Origines : web, Android et iOS acceptés ; une origine inconnue n'est jamais autorisée.
 {
-  const ok = await appel(bon, "https://localhost");
-  assert.equal(ok.status, 200);
-  assert.equal(ok.headers.get("Access-Control-Allow-Origin"), "https://localhost");
-  const inconnue = await appel(bon, "https://malveillant.example");
-  assert.notEqual(inconnue.headers.get("Access-Control-Allow-Origin"), "https://malveillant.example");
+  assert.equal((await appel(bon, { origine: "https://localhost" })).headers.get("Access-Control-Allow-Origin"), "https://localhost");
+  assert.equal((await appel(bon, { origine: "capacitor://localhost" })).headers.get("Access-Control-Allow-Origin"), "capacitor://localhost");
+  assert.notEqual((await appel(bon, { origine: "https://malveillant.example" })).headers.get("Access-Control-Allow-Origin"), "https://malveillant.example");
+  groupes++;
 }
 
-// 2. Mauvais mot de passe : refus.
+// 3. Mauvais mot de passe, puis absence : refus.
 {
-  const r = await appel(bon.replace("mot-de-passe-test", "faux"));
-  assert.equal(r.status, 401);
+  assert.equal((await appel({ ...bon, motdepasse: "faux" }, { ip: "10.0.0.2" })).status, 401);
+  assert.equal((await appel({ identite: "Ami", salle: "reunion", langue: "fr" }, { ip: "10.0.0.2" })).status, 401);
+  groupes++;
 }
 
-// 3. Pas de mot de passe : refus.
+// 4. Données invalides : refus.
 {
-  const r = await appel("identite=Ami&salle=reunion&langue=fr");
-  assert.equal(r.status, 401);
+  assert.equal((await appel({ ...bon, langue: "../x" })).status, 400);
+  assert.equal((await appel({ ...bon, identite: "a".repeat(65) })).status, 400);
+  groupes++;
 }
 
-// 4. Langue invalide ou données trop longues : refus.
+// 5. Le mot de passe n'est plus accepté dans l'adresse (journaux du serveur).
 {
-  assert.equal((await appel(bon.replace("langue=fr", "langue=../x"))).status, 400);
-  assert.equal((await appel(bon.replace("identite=Ami", "identite=" + "a".repeat(65)))).status, 400);
-}
-
-// 5. Mauvaise route : 404.
-{
-  const r = await worker.fetch(new Request("https://jetons.test/autre"), env, {}, maintenant);
+  const r = await worker.fetch(new Request("https://jetons.test/token?identite=Ami&salle=reunion&langue=fr&motdepasse=mot-de-passe-test", { method: "GET" }), env, {}, maintenant);
   assert.equal(r.status, 404);
+  groupes++;
 }
 
 // 6. Configuration incomplète : erreur explicite, aucun jeton.
 {
-  const r = await worker.fetch(new Request("https://jetons.test/token?" + bon), { ...env, LIVEKIT_API_SECRET: "" }, {}, maintenant);
-  assert.equal(r.status, 500);
+  assert.equal((await appel(bon, { env: { ...env, LIVEKIT_API_SECRET: "" } })).status, 500);
+  groupes++;
 }
 
-console.log("OK : groupes de tests du service de jetons passent");
+// 7. Corps qui n'est pas du JSON : refus propre.
+{
+  const r = await worker.fetch(new Request("https://jetons.test/token", { method: "POST", headers: { Origin: "https://exemple.github.io" }, body: "pas du json" }), env, {}, maintenant);
+  assert.equal(r.status, 400);
+  groupes++;
+}
+
+console.log(`OK : ${groupes} groupes de tests du service de jetons passent`);
