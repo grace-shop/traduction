@@ -520,3 +520,51 @@ body.taille-grande .bulle { font-size: 1.12rem; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* Logo de l'application : écran d'ouverture, en-têtes, et filigrane quand les sous-titres sont vides */
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: var(--fond);
+  pointer-events: none;
+  animation: fondu-splash 2.4s ease forwards;
+}
+.splash img {
+  width: 112px;
+  height: 112px;
+  border-radius: 28px;
+  box-shadow: 0 24px 60px -12px color-mix(in srgb, var(--aurore) 45%, transparent);
+  animation: apparition-logo 1.1s cubic-bezier(.2, .8, .2, 1) both;
+}
+@keyframes fondu-splash {
+  0%, 68% { opacity: 1; visibility: visible; }
+  100% { opacity: 0; visibility: hidden; }
+}
+@keyframes apparition-logo {
+  from { opacity: 0; transform: scale(.7) translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+.logo {
+  width: 48px;
+  height: 48px;
+  flex: none;
+  border-radius: 13px;
+  box-shadow: 0 10px 30px -10px color-mix(in srgb, var(--aurore) 55%, transparent);
+  filter: none;
+}
+.logo-petit { width: 26px; height: 26px; flex: none; border-radius: 8px; }
+.accroche-marque img { width: 22px; height: 22px; border-radius: 6px; vertical-align: -5px; margin-right: 10px; }
+
+.sous-titres:empty {
+  min-height: 150px;
+  background: url("icone.svg") center / 64px no-repeat;
+  opacity: .22;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash { animation: none; opacity: 0; visibility: hidden; }
+}

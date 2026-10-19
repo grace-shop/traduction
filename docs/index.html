@@ -21,9 +21,12 @@
 <body data-phase="accueil">
   <canvas id="fond" aria-hidden="true"></canvas>
 
+  <!-- Écran d'ouverture : le logo apparaît, puis s'efface tout seul (voir style.css) -->
+  <div class="splash" aria-hidden="true"><img src="icone.svg" alt=""></div>
+
   <main class="scene">
     <div class="accroche" aria-hidden="true">
-      <p class="accroche-marque">Appel traduit</p>
+      <p class="accroche-marque"><img src="icone.svg" alt="" aria-hidden="true">Appel traduit</p>
       <p class="accroche-titre" data-i18n="sous_titre">Parlez votre langue, tout le monde comprend.</p>
       <p class="accroche-note">
         <span></span><span></span><span></span><span></span><span></span>
@@ -32,18 +35,7 @@
     <section class="panneau" aria-labelledby="titre">
 
       <header class="entete">
-        <svg class="logo" viewBox="0 0 64 64" aria-hidden="true">
-          <defs>
-            <radialGradient id="g" cx="35%" cy="30%" r="75%">
-              <stop offset="0" stop-color="#e0faff"/>
-              <stop offset=".3" stop-color="#7cf5ff"/>
-              <stop offset=".75" stop-color="#8b5cf6"/>
-              <stop offset="1" stop-color="#1e1b4b"/>
-            </radialGradient>
-          </defs>
-          <circle cx="32" cy="32" r="30" fill="url(#g)"/>
-          <ellipse cx="32" cy="32" rx="30" ry="9" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="1.2" transform="rotate(-18 32 32)"/>
-        </svg>
+        <img class="logo" src="icone.svg" alt="" aria-hidden="true">
         <div class="entete-texte">
           <h1 class="titre" id="titre" data-i18n="titre">Appel traduit</h1>
           <p class="sous-titre" data-i18n="sous_titre">Parlez votre langue, tout le monde comprend.</p>
@@ -82,6 +74,7 @@
       <!-- Vue 2 : en appel -->
       <div class="vue-appel">
         <div class="barre">
+          <img class="logo-petit" src="icone.svg" alt="" aria-hidden="true">
           <p class="salle" id="nom-salle"></p>
           <span class="pastille" data-i18n="en_direct">En direct</span>
         </div>
