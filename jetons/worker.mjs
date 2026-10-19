@@ -1,3 +1,4 @@
+// Service de jetons (version à jour : CORS et requête de vérification OPTIONS).
 // Délivre un jeton LiveKit signé, après vérification du mot de passe d'appel.
 // Déployé sur Cloudflare Workers (gratuit). Aucun audio ni texte ne passe par ce code.
 
