@@ -9,8 +9,10 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
-COPY . .
-RUN chmod +x demarrer.sh
+# Précharge le modèle Whisper pour éviter son téléchargement à chaque démarrage.
+# Remplace "small" par la valeur de MODELE_WHISPER dans config.py.
+RUN python -c "from faster_whisper import WhisperModel; WhisperModel('small', compute_type='int8')"
 
-EXPOSE 8000
-CMD ["./demarrer.sh"]
+COPY . .
+
+CMD ["python", "agent.py", "start"]
