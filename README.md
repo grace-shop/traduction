@@ -94,3 +94,29 @@ conforme à votre cadre légal (RGPD notamment).
 - [ ] Traduction de secours (DeepL ou autre) si MyMemory est indisponible
 - [ ] Applications natives téléphone et ordinateur (aujourd'hui : application web installable)
 - [ ] Reconnexion automatique après une coupure réseau
+
+## Version navigateur (sans Python, sans serveur à entretenir)
+
+Cette version tourne entièrement dans le navigateur. Seul le service de jetons, écrit en
+JavaScript, tourne sur Cloudflare Workers (gratuit).
+
+- `docs/` : le site (à publier avec GitHub Pages)
+- `jetons/` : le service qui délivre les jetons LiveKit, après vérification du mot de passe
+- `tests/test_worker.mjs` : tests du service de jetons, à lancer avec `node tests/test_worker.mjs`
+
+Mise en place :
+
+1. Créer un compte Cloudflare (gratuit) et un projet LiveKit Cloud (gratuit).
+2. Déployer le service : `cd jetons && npx wrangler deploy`
+3. Enregistrer les secrets, un par un, avec `npx wrangler secret put NOM` :
+   `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `MOT_DE_PASSE_APPEL`,
+   et `ORIGINE_AUTORISEE` (l'adresse du site GitHub Pages, par exemple `https://votre-nom.github.io`).
+4. Mettre l'adresse obtenue dans `docs/config.js` (`TOKEN_URL`).
+5. Dans GitHub : Settings > Pages > Deploy from a branch > la branche, dossier `/docs`.
+
+Limites connues :
+
+- La reconnaissance vocale fonctionne sur Chrome et Edge. Safari est partiel, Firefox ne la gère pas.
+- La voix de lecture est celle du système de l'auditeur. Elle varie selon l'appareil.
+- Chrome envoie l'audio de la reconnaissance aux serveurs de Google : à mentionner dans le consentement.
+- Le son original n'est entendu que des personnes qui parlent la même langue.

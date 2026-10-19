@@ -1,0 +1,5 @@
+# Déploiement : cd jetons && npx wrangler deploy
+# Puis enregistrer les secrets (une seule fois) : voir docs/../README.md, section « Version navigateur ».
+name = "appel-traduit-jetons"
+main = "worker.mjs"
+compatibility_date = "2024-09-01"
