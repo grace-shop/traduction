@@ -99,13 +99,16 @@
   }
 
   // Lit un texte. onFin est appelé quand la lecture est terminée.
-  function parler(texte, bcp47, nomVoix, onFin) {
+  // reglages : { vitesse, volume } choisis par l'auditeur.
+  function parler(texte, bcp47, nomVoix, onFin, reglages) {
+    const vitesse = (reglages && reglages.vitesse) || 1;
+    const volume = reglages && Number.isFinite(reglages.volume) ? reglages.volume : 1;
     if (natif()) {
       const tts = module("TextToSpeech");
       if (!tts) { onFin(); return; }
       const debut = Date.now();
-      const duree = Math.max(1500, texte.length * 80); // filet de sécurité si la lecture rend la main trop tôt
-      tts.speak({ text: texte, lang: bcp47, rate: 1.0, pitch: 1.0, volume: 1.0, category: "playback" })
+      const duree = Math.max(1500, (texte.length * 80) / vitesse); // filet de sécurité si la lecture rend la main trop tôt
+      tts.speak({ text: texte, lang: bcp47, rate: vitesse, pitch: 1.0, volume, category: "playback" })
         .catch(() => {})
         .finally(() => setTimeout(onFin, Math.max(0, duree - (Date.now() - debut))));
       return;
@@ -113,6 +116,8 @@
     if (!("speechSynthesis" in window)) { onFin(); return; }
     const phrase = new SpeechSynthesisUtterance(texte);
     phrase.lang = bcp47;
+    phrase.rate = vitesse;
+    phrase.volume = volume;
     const voix = speechSynthesis.getVoices().find((v) => v.name === nomVoix) || voixes(bcp47)[0];
     if (voix) phrase.voice = voix;
     phrase.onend = onFin;

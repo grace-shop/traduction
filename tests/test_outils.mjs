@@ -83,6 +83,37 @@ let groupes = 0;
   groupes++;
 }
 
+// Lien d'invitation : nom de salle prérenseigné, jamais de mot de passe.
+{
+  assert.equal(O.lienInvitation("https://exemple.test/app/index.html?x=1#haut", " reunion famille "),
+    "https://exemple.test/app/index.html?salle=reunion+famille");
+  groupes++;
+}
+
+// Export de l'historique : une ligne par message.
+{
+  const texte = O.historiqueTexte([
+    { heure: "10:01", auteur: "Awa", texte: "Bonjour" },
+    { heure: "10:02", auteur: "Kenji", texte: "Hello" },
+  ]);
+  assert.equal(texte, "[10:01] Awa : Bonjour\n[10:02] Kenji : Hello");
+  assert.equal(O.historiqueTexte([]), "");
+  groupes++;
+}
+
+// Réglages : valeurs bornées, défauts pour tout ce qui manque ou est invalide.
+{
+  assert.deepEqual(json(O.normaliserReglages(null)), json(O.DEFAUTS_REGLAGES));
+  const r = O.normaliserReglages({ vitesse: 9, volume: -2, taille: "énorme", masquer: "oui", interface: "EN" });
+  assert.equal(r.vitesse, 1.5);
+  assert.equal(r.volume, 0);
+  assert.equal(r.taille, "normale");
+  assert.equal(r.masquer, false);
+  assert.equal(r.interface, "fr");
+  assert.equal(O.normaliserReglages({ vitesse: "0.8", taille: "grande", masquer: true, interface: "de" }).vitesse, 0.8);
+  groupes++;
+}
+
 // Langues : codes uniques, codes BCP 47 cohérents avec le code court.
 {
   const codes = L.map((l) => l.code);

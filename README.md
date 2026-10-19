@@ -38,6 +38,16 @@ Sur Android, l'APK est construit automatiquement (voir plus bas).
 Le service de jetons accepte une requête `POST /token` au format JSON
 (`identite`, `salle`, `langue`, `motdepasse`) et répond `{ token, url }`.
 
+## Fonctions de l'appel
+
+- **Langue de l'interface** : français, anglais, espagnol, portugais, allemand, arabe (droite à gauche). Choisie automatiquement d'après le navigateur, puis mémorisée sur l'appareil. Les textes sont dans `docs/i18n.js`.
+- **Lien d'invitation** : « Copier le lien » ouvre l'application avec le nom de la salle déjà rempli. Le mot de passe n'est jamais dans le lien. Un QR code peut aussi être affiché (bibliothèque `qrcode-generator` chargée depuis cdnjs, version 1.4.4).
+- **Réglages de lecture** : vitesse, volume de la traduction, taille des sous-titres, masquage. Mémorisés sur l'appareil seulement.
+- **Réécouter** : relit la dernière traduction.
+- **Télécharger** : exporte la conversation affichée dans un fichier texte, créé sur l'appareil. Rien n'est envoyé ni stocké sur un serveur.
+- **Caméra** : vidéo optionnelle, visible par les autres participants. Désactivée par défaut.
+- **Participant qui parle** : son nom est mis en avant dans la liste.
+
 ## Traduction de secours (facultatif)
 
 Si MyMemory est saturé ou indisponible, l'application peut utiliser un second service compatible

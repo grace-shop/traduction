@@ -33,54 +33,60 @@
           <circle cx="32" cy="32" r="30" fill="url(#g)"/>
           <ellipse cx="32" cy="32" rx="30" ry="9" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="1.2" transform="rotate(-18 32 32)"/>
         </svg>
-        <div>
-          <h1 class="titre" id="titre">Appel traduit</h1>
-          <p class="sous-titre">Parlez votre langue, tout le monde comprend.</p>
+        <div class="entete-texte">
+          <h1 class="titre" id="titre" data-i18n="titre">Appel traduit</h1>
+          <p class="sous-titre" data-i18n="sous_titre">Parlez votre langue, tout le monde comprend.</p>
         </div>
+        <label class="interface-choix">
+          <span class="visible-lecteur" data-i18n="langue_interface">Langue de l'interface</span>
+          <select id="langue-interface"></select>
+        </label>
       </header>
 
       <!-- Vue 1 : rejoindre -->
       <div class="vue-accueil">
-        <label class="champ" for="nom"><span>Votre nom</span>
-          <input id="nom" autocomplete="off" maxlength="64" placeholder="Ex. Awa">
+        <label class="champ" for="nom"><span data-i18n="champ_nom">Votre nom</span>
+          <input id="nom" autocomplete="off" maxlength="64" data-i18n-placeholder="ex_nom" placeholder="Ex. Awa">
         </label>
-        <label class="champ" for="langue"><span>Votre langue</span>
+        <label class="champ" for="langue"><span data-i18n="champ_langue">Votre langue</span>
           <select id="langue"></select>
         </label>
-        <label class="champ" for="voix"><span>Voix de lecture</span>
+        <label class="champ" for="voix"><span data-i18n="champ_voix">Voix de lecture</span>
           <select id="voix"></select>
         </label>
-        <label class="champ" for="salle"><span>Nom de la salle</span>
-          <input id="salle" autocomplete="off" maxlength="64" placeholder="Ex. reunion-famille">
+        <label class="champ" for="salle"><span data-i18n="champ_salle">Nom de la salle</span>
+          <input id="salle" autocomplete="off" maxlength="64" data-i18n-placeholder="ex_salle" placeholder="Ex. reunion-famille">
         </label>
-        <label class="champ" for="motdepasse"><span>Mot de passe de l'appel</span>
+        <label class="champ" for="motdepasse"><span data-i18n="champ_mdp">Mot de passe de l'appel</span>
           <input id="motdepasse" type="password" autocomplete="off">
         </label>
 
         <label class="consentement">
           <input id="consentement" type="checkbox">
-          <span>J'accepte que ma voix soit reconnue par mon appareil, et que le texte soit traduit par un service tiers, pour cet appel uniquement. <a href="confidentialite.html" target="_blank" rel="noopener">Voir la politique de confidentialité</a>.</span>
+          <span data-i18n-html="consent_html">J'accepte que ma voix soit reconnue par mon appareil, et que le texte soit traduit par un service tiers, pour cet appel uniquement. <a href="confidentialite.html" target="_blank" rel="noopener">Voir la politique de confidentialité</a>.</span>
         </label>
 
-        <button id="rejoindre" class="bouton" type="button">Rejoindre l'appel</button>
+        <button id="rejoindre" class="bouton" type="button" data-i18n="rejoindre">Rejoindre l'appel</button>
         <p id="statut" class="statut" role="status" aria-live="polite"></p>
-        <p class="conseil">Un casque évite que la traduction ne soit captée par votre micro.</p>
+        <p class="conseil" data-i18n="conseil">Un casque évite que la traduction ne soit captée par votre micro.</p>
       </div>
 
       <!-- Vue 2 : en appel -->
       <div class="vue-appel">
         <div class="barre">
           <p class="salle" id="nom-salle"></p>
-          <span class="pastille">En direct</span>
+          <span class="pastille" data-i18n="en_direct">En direct</span>
         </div>
 
-        <ul class="participants" id="participants" aria-label="Participants"></ul>
+        <ul class="participants" id="participants" data-i18n-aria="participants" aria-label="Participants"></ul>
         <div class="ligne-langue">
           <span id="compteur" class="compteur"></span>
-          <label class="langue-appel"><span>Ma langue</span>
-            <select id="langue-appel" aria-label="Changer ma langue"></select>
+          <label class="langue-appel"><span data-i18n="ma_langue">Ma langue</span>
+            <select id="langue-appel" data-i18n-aria="changer_langue" aria-label="Changer ma langue"></select>
           </label>
         </div>
+
+        <div class="videos" id="videos" aria-live="off"></div>
 
         <div class="orbe-zone" id="zone-orbe" aria-hidden="true">
           <span class="anneau"></span>
@@ -88,20 +94,56 @@
           <span class="orbe"></span>
         </div>
 
-        <div class="sous-titres" id="sous-titres" role="log" aria-label="Messages traduits"></div>
+        <div class="sous-titres" id="sous-titres" role="log" data-i18n-aria="messages" aria-label="Messages traduits"></div>
 
-        <div class="commandes" role="group" aria-label="Commandes de l'appel">
+        <div class="commandes" role="group" data-i18n-aria="commandes" aria-label="Commandes de l'appel">
           <button id="micro" class="bouton secondaire" type="button" aria-pressed="false">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
-            <span id="micro-libelle">Micro</span>
+            <span id="micro-libelle" data-i18n="micro">Micro</span>
+          </button>
+          <button id="camera" class="bouton secondaire" type="button" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="14" height="12" rx="3"/><path d="M16 10l6-3v10l-6-3"/></svg>
+            <span id="camera-libelle" data-i18n="camera">Caméra</span>
           </button>
           <button id="quitter" class="bouton danger" type="button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 13c3.5-3.5 14.5-3.5 18 0l-2 3-3-1.5v-2c-2.2-.7-4.8-.7-7 0v2L6 16z"/></svg>
-            Quitter
+            <span data-i18n="quitter">Quitter</span>
           </button>
         </div>
+
+        <div class="outils" role="group" data-i18n-aria="outils" aria-label="Outils de l'appel">
+          <button id="copier-lien" class="bouton petit secondaire" type="button" data-i18n="copier_lien">Copier le lien</button>
+          <button id="afficher-qr" class="bouton petit secondaire" type="button" aria-expanded="false" aria-controls="qr" data-i18n="qr">QR code</button>
+          <button id="reecouter" class="bouton petit secondaire" type="button" data-i18n="reecouter">Réécouter</button>
+          <button id="telecharger" class="bouton petit secondaire" type="button" data-i18n="telecharger">Télécharger</button>
+        </div>
+        <div id="qr" class="qr" hidden></div>
         <p id="etat" class="statut" role="status" aria-live="polite"></p>
       </div>
+
+      <!-- Réglages : visibles à l'accueil comme pendant l'appel -->
+      <details class="reglages" id="reglages">
+        <summary data-i18n="reglages">Réglages</summary>
+        <div class="reglages-corps">
+          <label class="champ"><span data-i18n="vitesse">Vitesse de lecture</span>
+            <input id="vitesse" type="range" min="0.6" max="1.5" step="0.1" value="1">
+          </label>
+          <label class="champ"><span data-i18n="volume">Volume de la traduction</span>
+            <input id="volume" type="range" min="0" max="1" step="0.05" value="1">
+          </label>
+          <label class="champ"><span data-i18n="taille">Taille des sous-titres</span>
+            <select id="taille">
+              <option value="petite" data-i18n="taille_petite">Petite</option>
+              <option value="normale" data-i18n="taille_normale">Normale</option>
+              <option value="grande" data-i18n="taille_grande">Grande</option>
+            </select>
+          </label>
+          <label class="consentement reglage-case">
+            <input id="masquer" type="checkbox">
+            <span data-i18n="masquer">Masquer les sous-titres</span>
+          </label>
+        </div>
+      </details>
     </section>
   </main>
 
@@ -110,6 +152,7 @@
   <script src="langues.js"></script>
   <script src="config.js"></script>
   <script src="outils.js"></script>
+  <script src="i18n.js"></script>
   <script src="plateforme.js"></script>
   <script src="app.js"></script>
   <script type="module" src="fond3d.js"></script>

@@ -249,6 +249,44 @@ a { color: var(--accent); }
 
 .visible-lecteur { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 
+/* Sélecteur de langue d'interface, réglages, outils d'appel, vidéo */
+.entete-texte { flex: 1; min-width: 0; }
+.interface-choix { margin: 0; flex: none; }
+.interface-choix select { width: auto; margin: 0; padding: 7px 28px 7px 10px; font-size: .8rem; border-radius: 10px; }
+.bouton.petit { width: auto; padding: 10px 8px; font-size: .84rem; border-radius: 12px; }
+.outils { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 10px; }
+.qr { margin: 12px auto 0; width: 200px; padding: 12px; border-radius: 16px; background: #fff; }
+.qr svg { display: block; width: 100%; height: auto; }
+.qr p { margin: 0; font-size: .8rem; color: #333; text-align: center; }
+.videos { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 12px; }
+.videos:empty { display: none; }
+.video-tuile {
+  position: relative; aspect-ratio: 16 / 9; overflow: hidden;
+  border-radius: 14px; border: 1px solid var(--bordure); background: #0b0d18;
+}
+.video-tuile video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.video-tuile.moi video { transform: scaleX(-1); }
+.video-tuile .nom {
+  position: absolute; left: 8px; bottom: 8px; padding: 3px 9px; border-radius: 999px;
+  font-size: .72rem; background: rgba(0, 0, 0, .55); color: var(--texte);
+}
+.chip.parle { color: var(--succes); border-color: rgba(94, 234, 212, .6); box-shadow: 0 0 14px -2px rgba(94, 234, 212, .6); }
+.reglages { margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--bordure); }
+.reglages summary { cursor: pointer; font-size: .85rem; color: var(--doux); list-style: none; text-align: center; }
+.reglages summary::-webkit-details-marker { display: none; }
+.reglages-corps { margin-top: 16px; }
+.reglages input[type="range"] {
+  -webkit-appearance: auto; appearance: auto;
+  width: 100%; height: 28px; margin: 4px 0 0; padding: 0; border: 0; background: none;
+  accent-color: var(--accent); cursor: pointer;
+}
+.reglage-case { margin: 0 0 4px; }
+.commandes { grid-template-columns: repeat(3, 1fr); }
+.commandes .bouton { padding: 14px 8px; font-size: .92rem; }
+body.sous-titres-masques .sous-titres { display: none; }
+body.taille-petite .bulle { font-size: .85rem; }
+body.taille-grande .bulle { font-size: 1.12rem; }
+
 /* Petits écrans */
 @media (max-width: 380px) {
   .panneau { padding: 22px 18px 20px; }

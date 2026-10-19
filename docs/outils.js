@@ -84,8 +84,43 @@
     };
   }
 
+  // Lien d'invitation : ouvre l'application avec le nom de la salle déjà renseigné.
+  // Le mot de passe n'est jamais dans le lien.
+  function lienInvitation(base, salle) {
+    const sansParametres = String(base).split(/[?#]/)[0];
+    const nom = encodeURIComponent(String(salle || "").trim()).replace(/%20/g, "+");
+    return `${sansParametres}?salle=${nom}`;
+  }
+
+  // Historique exportable : une ligne par message, sans aucune donnée technique.
+  function historiqueTexte(messages) {
+    return messages
+      .map((m) => `[${m.heure}] ${m.auteur} : ${m.texte}`)
+      .join("\n");
+  }
+
+  // Réglages de lecture : valeurs ramenées dans des limites raisonnables, défauts si absentes.
+  const DEFAUTS_REGLAGES = { vitesse: 1, volume: 1, taille: "normale", masquer: false, interface: "fr" };
+  const TAILLES = ["petite", "normale", "grande"];
+
+  function normaliserReglages(brut) {
+    const r = brut && typeof brut === "object" ? brut : {};
+    const nombre = (v, min, max, defaut) => {
+      const x = Number(v);
+      return Number.isFinite(x) ? Math.min(max, Math.max(min, x)) : defaut;
+    };
+    return {
+      vitesse: nombre(r.vitesse, 0.6, 1.5, DEFAUTS_REGLAGES.vitesse),
+      volume: nombre(r.volume, 0, 1, DEFAUTS_REGLAGES.volume),
+      taille: TAILLES.includes(r.taille) ? r.taille : DEFAUTS_REGLAGES.taille,
+      masquer: r.masquer === true,
+      interface: typeof r.interface === "string" && /^[a-z]{2}$/.test(r.interface) ? r.interface : DEFAUTS_REGLAGES.interface,
+    };
+  }
+
   window.Outils = {
     decouper, codeMyMemory, paireMyMemory, cleCache, memoriser, lireCache, lireMessage,
-    texteUtile, estDoublon, requeteSecours, TAILLE_CACHE,
+    texteUtile, estDoublon, requeteSecours, lienInvitation, historiqueTexte, normaliserReglages,
+    DEFAUTS_REGLAGES, TAILLE_CACHE,
   };
 })();

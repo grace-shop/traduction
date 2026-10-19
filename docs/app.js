@@ -1,7 +1,7 @@
 // Appel traduit : logique de l'appel.
 // Chacun parle dans sa langue. Le texte reconnu est envoyé aux autres via LiveKit ; chacun le
 // reçoit dans sa langue, traduit et lu à voix haute si nécessaire.
-const { Room, RoomEvent, createLocalAudioTrack } = LivekitClient;
+const { Room, RoomEvent, createLocalAudioTrack, createLocalVideoTrack } = LivekitClient;
 
 const encodeur = new TextEncoder();
 const decodeur = new TextDecoder();
@@ -9,23 +9,58 @@ const SUJET_TEXTE = "texte";
 const SUJET_LANGUE = "langue";
 const LONGUEUR_MAX_TRADUCTION = 450; // MyMemory accepte des requêtes d'environ 500 caractères
 const MAX_BULLES = 6;
+const URL_QR = "https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js";
 
 const $ = (id) => document.getElementById(id);
 const corps = document.body;
+const t = (cle, parametres) => I18N.t(cle, parametres);
 
 let room = null;
 let micro = null;
-let maLangue = null;       // code court, par exemple "fr"
-let maLangueBcp = null;    // étiquette, par exemple "fr-FR"
+let camera = null;          // piste vidéo locale, si la caméra est activée
+let maLangue = null;        // code court, par exemple "fr"
+let maLangueBcp = null;     // étiquette, par exemple "fr-FR"
 let monIdentite = null;
+let salleCourante = "";
 let micActif = true;
 let analyseur = null;
 let contexteAudio = null;
 let fileLecture = [];
 let enLecture = false;
 let quotaAtteint = false;
-let dernierEnvoi = null;  // dernier message envoyé, pour écarter les doublons
-const langues = new Map(); // identité -> code de langue, pour chaque participant distant
+let dernierEnvoi = null;    // dernier message envoyé, pour écarter les doublons
+let dernierTexte = null;    // dernière traduction lue à voix haute, pour « Réécouter »
+let historique = [];        // messages affichés pendant l'appel, pour l'export
+let parlent = new Set();    // identités qui parlent en ce moment
+let signatureParlent = "";
+let reglages = Outils.normaliserReglages({});
+const langues = new Map();  // identité -> code de langue, pour chaque participant distant
+
+// ---------- Réglages ----------
+
+function lireReglages() {
+  try {
+    const brut = JSON.parse(localStorage.getItem("reglages") || "{}");
+    reglages = Outils.normaliserReglages(brut);
+    reglages.interface = brut && typeof brut.interface === "string" ? brut.interface : null;
+  } catch {
+    reglages = Outils.normaliserReglages({});
+  }
+}
+
+function sauverReglages() {
+  try { localStorage.setItem("reglages", JSON.stringify(reglages)); } catch { /* stockage indisponible */ }
+}
+
+function appliquerReglages() {
+  $("vitesse").value = reglages.vitesse;
+  $("volume").value = reglages.volume;
+  $("taille").value = reglages.taille;
+  $("masquer").checked = reglages.masquer;
+  corps.classList.toggle("sous-titres-masques", reglages.masquer);
+  corps.classList.remove("taille-petite", "taille-normale", "taille-grande");
+  corps.classList.add(`taille-${reglages.taille}`);
+}
 
 // ---------- Affichage ----------
 
@@ -49,6 +84,18 @@ function remplirSelectLangues(select, valeur) {
   select.value = valeur;
 }
 
+function remplirInterface() {
+  const select = $("langue-interface");
+  select.innerHTML = "";
+  I18N.langues().forEach(({ code, nom }) => {
+    const option = document.createElement("option");
+    option.value = code;
+    option.textContent = nom;
+    select.appendChild(option);
+  });
+  select.value = I18N.actuelle();
+}
+
 function remplirLangues() {
   remplirSelectLangues($("langue"), "fr");
   remplirVoix();
@@ -62,7 +109,7 @@ function remplirVoix() {
   if (!voix.length) {
     const option = document.createElement("option");
     option.value = "";
-    option.textContent = Plateforme.natif() ? "Voix du téléphone" : "Voix par défaut";
+    option.textContent = Plateforme.natif() ? t("voix_native") : t("voix_defaut");
     select.appendChild(option);
     return;
   }
@@ -74,13 +121,13 @@ function remplirVoix() {
   });
 }
 
-// Liste des participants : moi et les autres, avec leur langue.
+// Liste des participants : moi et les autres, avec leur langue. Celui qui parle est mis en avant.
 function rafraichirParticipants() {
   const liste = $("participants");
   liste.innerHTML = "";
   const ajouter = (nom, code, moi) => {
     const pastille = document.createElement("li");
-    pastille.className = "chip" + (moi ? " moi" : "");
+    pastille.className = "chip" + (moi ? " moi" : "") + (parlent.has(nom) ? " parle" : "");
     pastille.textContent = `${nom} · ${trouverLangue(code)?.nom || code}`;
     liste.appendChild(pastille);
   };
@@ -88,7 +135,8 @@ function rafraichirParticipants() {
   if (room) {
     room.remoteParticipants.forEach((p) => ajouter(p.identity, langues.get(p.identity) || "?", false));
   }
-  $("compteur").textContent = `${liste.children.length} participant${liste.children.length > 1 ? "s" : ""}`;
+  const n = liste.children.length;
+  $("compteur").textContent = t(n > 1 ? "compteur_plusieurs" : "compteur_un", { n });
 }
 
 function ajouterBulle(auteur, texte, moi) {
@@ -103,6 +151,36 @@ function ajouterBulle(auteur, texte, moi) {
   conteneur.appendChild(bulle);
   while (conteneur.children.length > MAX_BULLES) conteneur.removeChild(conteneur.firstChild);
   conteneur.scrollTop = conteneur.scrollHeight;
+  historique.push({ heure: new Date().toTimeString().slice(0, 5), auteur, texte });
+}
+
+// Vidéos : une tuile par flux (la mienne en miroir, celles des autres telles quelles).
+function ajouterTuile(id, qui, element, moi) {
+  const tuile = document.createElement("div");
+  tuile.className = "video-tuile" + (moi ? " moi" : "");
+  tuile.dataset.id = id;
+  tuile.dataset.qui = qui;
+  element.setAttribute("playsinline", "");
+  element.autoplay = true;
+  if (moi) element.muted = true;
+  tuile.appendChild(element);
+  const etiquette = document.createElement("span");
+  etiquette.className = "nom";
+  etiquette.textContent = moi ? t("moi") : qui;
+  tuile.appendChild(etiquette);
+  $("videos").appendChild(tuile);
+}
+
+function retirerTuile(id) {
+  document.querySelectorAll(".video-tuile").forEach((tuile) => {
+    if (tuile.dataset.id === id) tuile.remove();
+  });
+}
+
+function retirerTuilesDe(qui) {
+  document.querySelectorAll(".video-tuile").forEach((tuile) => {
+    if (tuile.dataset.qui === qui) tuile.remove();
+  });
 }
 
 // Le cercle suit le niveau de ma voix : retour visuel que le micro fonctionne.
@@ -200,7 +278,7 @@ function lireSuivante() {
   enLecture = true;
   Plateforme.suspendreEcoute();
   const texte = fileLecture.shift();
-  Plateforme.parler(texte, maLangueBcp, $("voix").value, lireSuivante);
+  Plateforme.parler(texte, maLangueBcp, $("voix").value, lireSuivante, reglages);
 }
 
 // ---------- Messages ----------
@@ -214,14 +292,14 @@ function envoyerTexte(texte) {
   dernierEnvoi = { texte, heure: maintenant };
   const charge = encodeur.encode(JSON.stringify({ langue: maLangue, auteur: monIdentite, texte }));
   room.localParticipant.publishData(charge, { reliable: true, topic: SUJET_TEXTE })
-    .catch(() => etatAppel("Message non envoyé. Vérifiez votre connexion."));
+    .catch(() => etatAppel(t("st_non_envoye")));
   ajouterBulle(monIdentite, texte, true);
 }
 
 function recevoirTexte(donnees, participant) {
   const message = Outils.lireMessage(decodeur.decode(donnees));
   if (!message) return;
-  const auteur = participant ? participant.identity : "Participant";
+  const auteur = participant ? participant.identity : t("participant");
   if (message.langue === maLangue) {
     ajouterBulle(auteur, message.texte, false);
     return;
@@ -229,14 +307,15 @@ function recevoirTexte(donnees, participant) {
   traduire(message.texte, message.langue, maLangue)
     .then((traduit) => {
       ajouterBulle(auteur, traduit, false);
+      dernierTexte = traduit;
       lireEnFile(traduit);
     })
     .catch((erreur) => {
       if (erreur.message === "quota") {
-        if (!quotaAtteint) etatAppel("Quota de traduction atteint pour aujourd'hui : les messages ne sont plus traduits.");
+        if (!quotaAtteint) etatAppel(t("st_quota"));
         quotaAtteint = true;
       }
-      ajouterBulle(auteur, `${message.texte} (traduction indisponible)`, false);
+      ajouterBulle(auteur, `${message.texte} ${t("traduction_indisponible")}`, false);
     });
 }
 
@@ -261,29 +340,116 @@ function memoriserLangue(participant) {
   } catch { /* métadonnées absentes : la langue sera connue au premier message */ }
 }
 
+// ---------- Outils de l'appel ----------
+
+async function copierLien() {
+  const lien = Outils.lienInvitation(location.href, salleCourante);
+  try {
+    await navigator.clipboard.writeText(lien);
+    etatAppel(t("lien_copie"));
+  } catch {
+    etatAppel(t("lien_manuel") + lien);
+  }
+}
+
+function chargerQr() {
+  if (window.qrcode) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = URL_QR;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("qr"));
+    document.head.appendChild(script);
+  });
+}
+
+async function afficherQr() {
+  const zone = $("qr");
+  const bouton = $("afficher-qr");
+  if (!zone.hidden) {
+    zone.hidden = true;
+    bouton.setAttribute("aria-expanded", "false");
+    return;
+  }
+  try {
+    await chargerQr();
+    const qr = window.qrcode(0, "M");
+    qr.addData(Outils.lienInvitation(location.href, salleCourante));
+    qr.make();
+    zone.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 0 });
+    zone.hidden = false;
+    bouton.setAttribute("aria-expanded", "true");
+  } catch {
+    etatAppel(t("qr_indisponible"));
+  }
+}
+
+function reecouter() {
+  if (dernierTexte) lireEnFile(dernierTexte);
+}
+
+function telechargerHistorique() {
+  if (!historique.length) { etatAppel(t("historique_vide")); return; }
+  const contenu = Outils.historiqueTexte(historique);
+  const url = URL.createObjectURL(new Blob([contenu], { type: "text/plain;charset=utf-8" }));
+  const lien = document.createElement("a");
+  lien.href = url;
+  lien.download = `appel-${salleCourante.replace(/[^\p{L}\p{N}]+/gu, "-") || "conversation"}.txt`;
+  document.body.appendChild(lien);
+  lien.click();
+  lien.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function basculerCamera() {
+  if (!room) return;
+  const bouton = $("camera");
+  if (camera) {
+    try { await room.localParticipant.unpublishTrack(camera); } catch { /* déjà retirée */ }
+    camera.stop();
+    camera = null;
+    retirerTuile("moi-video");
+    bouton.setAttribute("aria-pressed", "false");
+    $("camera-libelle").textContent = t("camera");
+    etatAppel(t("st_camera_off"));
+    return;
+  }
+  try {
+    camera = await createLocalVideoTrack();
+    await room.localParticipant.publishTrack(camera);
+    ajouterTuile("moi-video", monIdentite, camera.attach(), true);
+    bouton.setAttribute("aria-pressed", "true");
+    $("camera-libelle").textContent = t("camera");
+    etatAppel(t("st_camera_on"));
+  } catch {
+    camera = null;
+    etatAppel(t("st_camera_err"));
+  }
+}
+
 // ---------- Appel ----------
 
 async function rejoindre() {
   const nom = $("nom").value.trim();
   const salle = $("salle").value.trim();
   const motdepasse = $("motdepasse").value;
-  if (!nom || !salle) { etat("Renseignez votre nom et la salle."); return; }
-  if (!motdepasse) { etat("Saisissez le mot de passe de l'appel."); return; }
+  if (!nom || !salle) { etat(t("st_nom_salle")); return; }
+  if (!motdepasse) { etat(t("st_mdp")); return; }
   if (!$("consentement").checked) {
-    etat("Acceptez le traitement de votre voix pour rejoindre l'appel.");
+    etat(t("st_consent"));
     return;
   }
   if (!Plateforme.disponible()) {
-    etat("La reconnaissance vocale n'est pas disponible sur cet appareil. Utilisez Chrome ou Edge.");
+    etat(t("st_pas_reco"));
     return;
   }
 
   $("rejoindre").disabled = true;
-  etat("Connexion...");
+  etat(t("st_connexion"));
 
   const permission = await Plateforme.demanderPermissions();
   if (!permission) {
-    etat("Le micro est refusé. Autorisez-le dans les réglages de l'appareil.");
+    etat(t("st_micro_refuse"));
     $("rejoindre").disabled = false;
     return;
   }
@@ -291,7 +457,10 @@ async function rejoindre() {
   maLangue = $("langue").value;
   maLangueBcp = trouverLangue(maLangue).bcp47;
   monIdentite = nom;
+  salleCourante = salle;
   quotaAtteint = false;
+  historique = [];
+  dernierTexte = null;
 
   // Le mot de passe part dans le corps de la requête, jamais dans l'adresse.
   let reponse;
@@ -302,31 +471,52 @@ async function rejoindre() {
       body: JSON.stringify({ identite: nom, salle, langue: maLangue, motdepasse }),
     });
   } catch {
-    etat("Impossible de joindre le serveur. Vérifiez votre connexion.");
+    etat(t("st_serveur"));
     $("rejoindre").disabled = false;
     return;
   }
-  if (reponse.status === 401) { etat("Mot de passe incorrect."); $("rejoindre").disabled = false; return; }
-  if (reponse.status === 429) { etat("Trop de tentatives. Réessayez dans quelques minutes."); $("rejoindre").disabled = false; return; }
-  if (!reponse.ok) { etat("Erreur de connexion au serveur."); $("rejoindre").disabled = false; return; }
+  if (reponse.status === 401) { etat(t("st_mdp_faux")); $("rejoindre").disabled = false; return; }
+  if (reponse.status === 429) { etat(t("st_trop")); $("rejoindre").disabled = false; return; }
+  if (!reponse.ok) { etat(t("st_erreur_serveur")); $("rejoindre").disabled = false; return; }
   const { token, url } = await reponse.json();
 
   room = new Room();
   room.on(RoomEvent.TrackSubscribed, (piste, publication, participant) => {
+    if (piste.kind === "video") {
+      ajouterTuile(publication.trackSid, participant.identity, piste.attach(), false);
+      return;
+    }
     if (piste.kind !== "audio") return;
     memoriserLangue(participant);
     appliquerAudio();
   });
-  room.on(RoomEvent.TrackUnsubscribed, () => appliquerAudio());
+  room.on(RoomEvent.TrackUnsubscribed, (piste, publication, participant) => {
+    if (piste.kind === "video") {
+      piste.detach().forEach((element) => element.remove());
+      retirerTuile(publication.trackSid);
+    }
+    appliquerAudio();
+  });
   room.on(RoomEvent.ParticipantConnected, (participant) => {
     memoriserLangue(participant);
     rafraichirParticipants();
-    etatAppel(`${participant.identity} a rejoint l'appel.`);
+    etatAppel(t("st_rejoint", { nom: participant.identity }));
   });
   room.on(RoomEvent.ParticipantDisconnected, (participant) => {
     langues.delete(participant.identity);
+    parlent.delete(participant.identity);
+    retirerTuilesDe(participant.identity);
     rafraichirParticipants();
-    etatAppel(`${participant.identity} a quitté l'appel.`);
+    etatAppel(t("st_quitte", { nom: participant.identity }));
+  });
+  room.on(RoomEvent.ActiveSpeakersChanged, (orateurs) => {
+    parlent = new Set(orateurs.map((o) => o.identity));
+    // On ne redessine la liste que si la liste des orateurs a réellement changé.
+    const signature = [...parlent].sort().join("|");
+    if (signature !== signatureParlent) {
+      signatureParlent = signature;
+      rafraichirParticipants();
+    }
   });
   room.on(RoomEvent.DataReceived, (payload, participant, kind, topic) => {
     if (topic === SUJET_TEXTE) {
@@ -340,16 +530,16 @@ async function rejoindre() {
       }
     }
   });
-  room.on(RoomEvent.Reconnecting, () => etatAppel("Connexion instable : reconnexion en cours..."));
-  room.on(RoomEvent.Reconnected, () => etatAppel("Reconnecté."));
-  room.on(RoomEvent.Disconnected, () => nettoyer("Appel terminé."));
+  room.on(RoomEvent.Reconnecting, () => etatAppel(t("st_instable")));
+  room.on(RoomEvent.Reconnected, () => etatAppel(t("st_reconnecte")));
+  room.on(RoomEvent.Disconnected, () => nettoyer(t("st_fin")));
 
   try {
     await room.connect(url, token);
     micro = await createLocalAudioTrack();
     await room.localParticipant.publishTrack(micro);
   } catch {
-    nettoyer("Connexion impossible. Vérifiez votre réseau et réessayez.");
+    nettoyer(t("st_echec"));
     return;
   }
 
@@ -361,15 +551,15 @@ async function rejoindre() {
   $("langue-appel").value = maLangue;
   micActif = true;
   $("micro").setAttribute("aria-pressed", "false");
-  $("micro-libelle").textContent = "Micro";
+  $("micro-libelle").textContent = t("micro");
   $("zone-orbe").classList.remove("muet");
   allerVers("appel");
-  etatAppel("Parlez : les autres entendront votre message dans leur langue.");
+  etatAppel(t("st_parlez"));
   rafraichirParticipants();
   appliquerAudio();
 
   Plateforme.demarrerEcoute(maLangueBcp, envoyerTexte).catch(() => {
-    etatAppel("La reconnaissance vocale s'est arrêtée.");
+    etatAppel(t("st_reco_arret"));
   });
 }
 
@@ -385,7 +575,7 @@ function changerLangue(nouvelle) {
   if (micActif) Plateforme.demarrerEcoute(maLangueBcp, envoyerTexte);
   appliquerAudio();
   rafraichirParticipants();
-  etatAppel(`Votre langue est maintenant : ${trouverLangue(nouvelle).nom}.`);
+  etatAppel(t("st_langue", { langue: trouverLangue(nouvelle).nom }));
 }
 
 function basculerMicro() {
@@ -399,9 +589,9 @@ function basculerMicro() {
     Plateforme.suspendreEcoute();
   }
   $("micro").setAttribute("aria-pressed", String(!micActif));
-  $("micro-libelle").textContent = micActif ? "Micro" : "Réactiver";
+  $("micro-libelle").textContent = micActif ? t("micro") : t("reactiver");
   $("zone-orbe").classList.toggle("muet", !micActif);
-  etatAppel(micActif ? "Micro activé." : "Micro coupé : les autres ne vous entendent plus.");
+  etatAppel(micActif ? t("st_micro_on") : t("st_micro_off"));
 }
 
 function nettoyer(message) {
@@ -410,6 +600,14 @@ function nettoyer(message) {
   fileLecture = [];
   enLecture = false;
   dernierEnvoi = null;
+  parlent = new Set();
+  signatureParlent = "";
+  if (camera) { camera.stop(); camera = null; }
+  $("camera").setAttribute("aria-pressed", "false");
+  $("camera-libelle").textContent = t("camera");
+  $("videos").innerHTML = "";
+  $("qr").hidden = true;
+  $("afficher-qr").setAttribute("aria-expanded", "false");
   if (contexteAudio) { contexteAudio.close().catch(() => {}); contexteAudio = null; }
   analyseur = null;
   langues.clear();
@@ -431,11 +629,39 @@ function quitter() {
 
 // ---------- Démarrage ----------
 
+lireReglages();
+I18N.choisir(I18N.codeInitial(reglages.interface));
+I18N.surChangement(() => {
+  remplirVoix();
+  rafraichirParticipants();
+});
+remplirInterface();
+appliquerReglages();
+
 remplirLangues();
 remplirSelectLangues($("langue-appel"), "fr");
+const salleDuLien = new URLSearchParams(location.search).get("salle");
+if (salleDuLien) $("salle").value = salleDuLien.slice(0, 64);
+
 if ("speechSynthesis" in window) speechSynthesis.onvoiceschanged = remplirVoix;
 $("langue").addEventListener("change", remplirVoix);
 $("langue-appel").addEventListener("change", (e) => changerLangue(e.target.value));
+$("langue-interface").addEventListener("change", (e) => {
+  I18N.choisir(e.target.value);
+  reglages.interface = e.target.value;
+  sauverReglages();
+  remplirInterface();
+});
 $("rejoindre").addEventListener("click", rejoindre);
 $("quitter").addEventListener("click", quitter);
 $("micro").addEventListener("click", basculerMicro);
+$("camera").addEventListener("click", basculerCamera);
+$("copier-lien").addEventListener("click", copierLien);
+$("afficher-qr").addEventListener("click", afficherQr);
+$("reecouter").addEventListener("click", reecouter);
+$("telecharger").addEventListener("click", telechargerHistorique);
+
+$("vitesse").addEventListener("input", (e) => { reglages.vitesse = Number(e.target.value); sauverReglages(); });
+$("volume").addEventListener("input", (e) => { reglages.volume = Number(e.target.value); sauverReglages(); });
+$("taille").addEventListener("change", (e) => { reglages.taille = e.target.value; sauverReglages(); appliquerReglages(); });
+$("masquer").addEventListener("change", (e) => { reglages.masquer = e.target.checked; sauverReglages(); appliquerReglages(); });
