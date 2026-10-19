@@ -6,6 +6,5 @@ langcodes==3.5.1
 livekit==1.1.10
 livekit-api==1.1.1
 livekit-agents==1.2.1
-fastapi==0.143.2
-uvicorn==0.54.0
+av==12.3.0
 numpy==2.5.4
