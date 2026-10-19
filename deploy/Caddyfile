@@ -1,0 +1,4 @@
+# HTTPS automatique (Let's Encrypt). Utilisé par deploy/docker-compose.yml.
+{$DOMAINE} {
+	reverse_proxy appel:8000
+}

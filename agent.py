@@ -1,5 +1,4 @@
 import asyncio
-import json
 import logging
 import os
 import tempfile
@@ -10,6 +9,7 @@ import numpy as np
 from livekit import rtc
 from livekit.agents import AutoSubscribe, JobContext, WorkerOptions, cli
 
+from logique import SUJET_SOUS_TITRES, metadonnees_participant, nom_piste, sous_titre
 from pipeline import synthetiser, traduire, transcrire, voix_pour
 
 logging.basicConfig(level=logging.INFO)
@@ -60,42 +60,40 @@ async def jouer(pcm: bytes, source: rtc.AudioSource) -> None:
 
 
 class Salle:
-    """Connaît les langues des participants et publie une piste par langue."""
+    """Connaît les langues et voix des auditeurs et publie une piste par (langue, voix)."""
 
     def __init__(self, room: rtc.Room):
         self.room = room
         self.pistes: dict[str, rtc.AudioSource] = {}
 
-    async def cibles(self) -> dict[str, str]:
-        """Retourne, pour chaque langue présente dans la salle, sa voix de synthèse."""
-        cibles: dict[str, str] = {}
+    async def cibles(self) -> dict[str, tuple[str, str]]:
+        """Retourne, pour chaque piste demandée, la langue et la voix de synthèse."""
+        cibles: dict[str, tuple[str, str]] = {}
         for participant in self.room.remote_participants.values():
             if participant.identity.startswith("agent"):
                 continue
-            try:
-                langue = json.loads(participant.metadata or "{}").get("langue")
-            except json.JSONDecodeError:
+            meta = metadonnees_participant(participant.metadata)
+            langue = meta.get("langue")
+            if not langue:
                 continue
-            if not langue or langue in cibles:
-                continue
-            voix = await voix_pour(langue)
-            if voix:
-                cibles[langue] = voix
-            else:
+            voix = meta.get("voix") or await voix_pour(langue)
+            if not voix:
                 log.warning("Aucune voix disponible pour la langue %s", langue)
+                continue
+            cibles.setdefault(nom_piste(langue, voix), (langue, voix))
         return cibles
 
-    async def source(self, langue: str) -> rtc.AudioSource:
-        if langue not in self.pistes:
+    async def source(self, nom: str) -> rtc.AudioSource:
+        if nom not in self.pistes:
             source = rtc.AudioSource(FREQUENCE, 1)
-            piste = rtc.LocalAudioTrack.create_audio_track(f"traduction-{langue}", source)
+            piste = rtc.LocalAudioTrack.create_audio_track(nom, source)
             await self.room.local_participant.publish_track(piste)
-            self.pistes[langue] = source
-            log.info("Piste publiée : traduction-%s", langue)
-        return self.pistes[langue]
+            self.pistes[nom] = source
+            log.info("Piste publiée : %s", nom)
+        return self.pistes[nom]
 
 
-async def traiter_segment(pcm: bytes, salle: Salle) -> None:
+async def traiter_segment(pcm: bytes, identite: str, salle: Salle) -> None:
     cibles = await salle.cibles()
     if not cibles:
         return
@@ -109,24 +107,40 @@ async def traiter_segment(pcm: bytes, salle: Salle) -> None:
             return
         log.info("[%s] %s", langue_source, texte)
 
+        # La traduction ne dépend que de la langue : on la calcule une fois par langue.
+        traductions: dict[str, str] = {}
         diffusions = []
-        for langue_cible, voix in cibles.items():
+        for nom, (langue_cible, voix) in cibles.items():
             if langue_cible == langue_source:
                 continue
             try:
-                traduit = await asyncio.to_thread(traduire, texte, langue_source, langue_cible)
-                log.info("[%s] %s", langue_cible, traduit)
-                mp3 = os.path.join(dossier, f"voix-{langue_cible}.mp3")
-                await synthetiser(traduit, voix, mp3)
+                if langue_cible not in traductions:
+                    traductions[langue_cible] = await asyncio.to_thread(
+                        traduire, texte, langue_source, langue_cible
+                    )
+                    log.info("[%s] %s", langue_cible, traductions[langue_cible])
+                mp3 = os.path.join(dossier, f"{nom}.mp3")
+                await synthetiser(traductions[langue_cible], voix, mp3)
                 audio = await asyncio.to_thread(mp3_vers_pcm, mp3)
             except Exception as erreur:
-                log.warning("Traduction vers %s ignorée : %s", langue_cible, erreur)
+                log.warning("Traduction vers %s (%s) ignorée : %s", langue_cible, voix, erreur)
                 continue
-            diffusions.append((langue_cible, audio))
+            diffusions.append((nom, audio))
+
+    # Sous-titres : le texte original et les traductions sont envoyés à tous les participants.
+    # Chacun ne retient que la langue qui le concerne.
+    try:
+        await salle.room.local_participant.publish_data(
+            sous_titre(identite, langue_source, texte, traductions),
+            reliable=True,
+            topic=SUJET_SOUS_TITRES,
+        )
+    except Exception as erreur:
+        log.warning("Sous-titres non envoyés : %s", erreur)
 
     taches = []
-    for langue_cible, audio in diffusions:
-        source = await salle.source(langue_cible)
+    for nom, audio in diffusions:
+        source = await salle.source(nom)
         taches.append(jouer(audio, source))
     if taches:
         await asyncio.gather(*taches)
@@ -134,14 +148,14 @@ async def traiter_segment(pcm: bytes, salle: Salle) -> None:
 
 async def boucle_traduction(file: asyncio.Queue, salle: Salle) -> None:
     while True:
-        pcm = await file.get()
+        pcm, identite = await file.get()
         try:
-            await traiter_segment(pcm, salle)
+            await traiter_segment(pcm, identite, salle)
         except Exception:
             log.exception("Erreur pendant la traduction d'un segment")
 
 
-async def ecouter(track: rtc.RemoteAudioTrack, file: asyncio.Queue) -> None:
+async def ecouter(track: rtc.RemoteAudioTrack, identite: str, file: asyncio.Queue) -> None:
     flux = rtc.AudioStream(track, sample_rate=FREQUENCE, num_channels=1)
     tampon = bytearray()
     silence = 0.0
@@ -166,12 +180,12 @@ async def ecouter(track: rtc.RemoteAudioTrack, file: asyncio.Queue) -> None:
         total = len(tampon) / (2 * FREQUENCE)
         if tampon and (silence >= SILENCE_FIN or total >= DUREE_MAX):
             if total - silence >= DUREE_MIN:
-                await file.put(bytes(tampon))
+                await file.put((bytes(tampon), identite))
             tampon.clear()
             silence = 0.0
 
     if tampon:
-        await file.put(bytes(tampon))
+        await file.put((bytes(tampon), identite))
 
 
 async def entrypoint(ctx: JobContext) -> None:
@@ -188,7 +202,7 @@ async def entrypoint(ctx: JobContext) -> None:
             return
         if participant.identity.startswith("agent"):
             return
-        asyncio.create_task(ecouter(track, file))
+        asyncio.create_task(ecouter(track, participant.identity, file))
 
 
 if __name__ == "__main__":
