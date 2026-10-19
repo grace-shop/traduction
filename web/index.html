@@ -23,6 +23,11 @@
       border-radius: 10px; border: 1px solid #2a2f3c; background: #0f1117;
       color: inherit; font-size: 1rem;
     }
+    .consentement {
+      display: flex; gap: 10px; align-items: flex-start; font-size: .85rem;
+      color: #9aa3b2; margin-bottom: 16px;
+    }
+    .consentement input { width: auto; margin: 3px 0 0; }
     button {
       width: 100%; padding: 12px; border: 0; border-radius: 10px;
       background: #4f7cff; color: #fff; font-size: 1rem; font-weight: 600; cursor: pointer;
@@ -30,22 +35,39 @@
     button.secondaire { background: #2a2f3c; margin-top: 10px; }
     button:disabled { opacity: .5; cursor: default; }
     #statut { margin-top: 16px; font-size: .9rem; color: #9aa3b2; min-height: 1.2em; }
+    .conseil { font-size: .8rem; color: #6f7888; margin-top: 12px; }
+    #sous-titres {
+      margin-top: 20px; min-height: 4em; font-size: 1rem; line-height: 1.4;
+      border-top: 1px solid #2a2f3c; padding-top: 16px;
+    }
+    #sous-titres p { margin: 0 0 8px; }
+    #sous-titres .auteur { color: #9aa3b2; font-size: .8rem; }
   </style>
 </head>
 <body>
   <main class="carte">
     <h1>Appel traduit</h1>
     <label for="nom">Votre nom</label>
-    <input id="nom" autocomplete="off">
+    <input id="nom" autocomplete="off" maxlength="64">
     <label for="langue">Votre langue</label>
     <select id="langue"></select>
     <label for="voix">Voix de traduction</label>
     <select id="voix"></select>
     <label for="salle">Nom de la salle</label>
-    <input id="salle" autocomplete="off">
+    <input id="salle" autocomplete="off" maxlength="64">
+    <label for="motdepasse">Mot de passe de l'appel</label>
+    <input id="motdepasse" type="password" autocomplete="off">
+    <label class="consentement">
+      <input id="consentement" type="checkbox">
+      <span>J'accepte que ma voix soit transcrite et traduite automatiquement, et que le texte
+      soit envoyé à des services tiers (transcription, traduction, synthèse vocale) pour cet appel
+      uniquement.</span>
+    </label>
     <button id="rejoindre">Rejoindre l'appel</button>
     <button id="quitter" class="secondaire" disabled>Quitter</button>
     <div id="statut"></div>
+    <p class="conseil">Utilisez un casque pour éviter que la traduction ne soit captée par votre micro.</p>
+    <div id="sous-titres" aria-live="polite"></div>
   </main>
   <div id="audio"></div>
 
@@ -76,6 +98,7 @@
     let maLangue = null;
     let maVoix = null;
     const conteneurAudio = document.getElementById("audio");
+    const conteneurSousTitres = document.getElementById("sous-titres");
     const selectLangue = document.getElementById("langue");
     const selectVoix = document.getElementById("voix");
 
@@ -121,19 +144,50 @@
       return metadonneesDuParticipant(participant).langue === maLangue;
     }
 
+    // Sous-titres : je n'affiche que le texte dans ma langue.
+    // Si le participant parle ma langue, j'affiche son texte original ; sinon ma traduction.
+    function afficherSousTitre(message) {
+      let texte = null;
+      if (message.langue_source === maLangue) {
+        texte = message.original;
+      } else {
+        texte = (message.traductions || {})[maLangue] || null;
+      }
+      if (!texte) return;
+
+      const ligne = document.createElement("p");
+      const auteur = document.createElement("span");
+      auteur.className = "auteur";
+      auteur.textContent = message.auteur + " : ";
+      ligne.appendChild(auteur);
+      ligne.appendChild(document.createTextNode(texte));
+      conteneurSousTitres.appendChild(ligne);
+      while (conteneurSousTitres.children.length > 3) {
+        conteneurSousTitres.removeChild(conteneurSousTitres.firstChild);
+      }
+    }
+
     document.getElementById("rejoindre").addEventListener("click", async () => {
       const nom = document.getElementById("nom").value.trim();
       const salle = document.getElementById("salle").value.trim();
+      const motdepasse = document.getElementById("motdepasse").value;
       maLangue = selectLangue.value;
       maVoix = selectVoix.value;
       if (!nom || !salle) { statut("Renseignez votre nom et la salle."); return; }
+      if (!motdepasse) { statut("Saisissez le mot de passe de l'appel."); return; }
+      if (!document.getElementById("consentement").checked) {
+        statut("Vous devez accepter le traitement de votre voix pour rejoindre l'appel.");
+        return;
+      }
       if (!maVoix) { statut("Choisissez une voix."); return; }
 
       statut("Connexion...");
       const reponse = await fetch(
         `/token?identite=${encodeURIComponent(nom)}&salle=${encodeURIComponent(salle)}` +
-        `&langue=${encodeURIComponent(maLangue)}&voix=${encodeURIComponent(maVoix)}`
+        `&langue=${encodeURIComponent(maLangue)}&voix=${encodeURIComponent(maVoix)}` +
+        `&motdepasse=${encodeURIComponent(motdepasse)}`
       );
+      if (reponse.status === 401) { statut("Mot de passe incorrect."); return; }
       if (!reponse.ok) { statut("Erreur : " + (await reponse.text())); return; }
       const { token, url } = await reponse.json();
 
@@ -149,8 +203,18 @@
         track.detach().forEach((element) => element.remove());
       });
 
+      room.on(RoomEvent.DataReceived, (payload, participant, kind, topic) => {
+        if (topic !== "sous-titres") return;
+        try {
+          afficherSousTitre(JSON.parse(new TextDecoder().decode(payload)));
+        } catch {
+          // Message mal formé : on l'ignore.
+        }
+      });
+
       room.on(RoomEvent.Disconnected, () => {
         conteneurAudio.innerHTML = "";
+        conteneurSousTitres.innerHTML = "";
         statut("Appel terminé.");
         document.getElementById("rejoindre").disabled = false;
         document.getElementById("quitter").disabled = true;
@@ -167,6 +231,7 @@
       document.getElementById("quitter").disabled = false;
       selectLangue.disabled = true;
       selectVoix.disabled = true;
+      document.getElementById("motdepasse").value = "";
     });
 
     document.getElementById("quitter").addEventListener("click", () => {

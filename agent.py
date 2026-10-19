@@ -1,5 +1,4 @@
 import asyncio
-import json
 import logging
 import os
 import tempfile
@@ -10,6 +9,7 @@ import numpy as np
 from livekit import rtc
 from livekit.agents import AutoSubscribe, JobContext, WorkerOptions, cli
 
+from logique import SUJET_SOUS_TITRES, metadonnees_participant, nom_piste, sous_titre
 from pipeline import synthetiser, traduire, transcrire, voix_pour
 
 logging.basicConfig(level=logging.INFO)
@@ -21,11 +21,6 @@ SEUIL_NIVEAU = 400
 SILENCE_FIN = 0.7
 DUREE_MAX = 12.0
 DUREE_MIN = 0.4
-
-
-def nom_piste(langue: str, voix: str) -> str:
-    """Nom de la piste audio de traduction destinée à une langue et une voix données."""
-    return f"traduction-{langue}-{voix}"
 
 
 def mp3_vers_pcm(chemin: str) -> bytes:
@@ -77,10 +72,7 @@ class Salle:
         for participant in self.room.remote_participants.values():
             if participant.identity.startswith("agent"):
                 continue
-            try:
-                meta = json.loads(participant.metadata or "{}")
-            except json.JSONDecodeError:
-                continue
+            meta = metadonnees_participant(participant.metadata)
             langue = meta.get("langue")
             if not langue:
                 continue
@@ -101,7 +93,7 @@ class Salle:
         return self.pistes[nom]
 
 
-async def traiter_segment(pcm: bytes, salle: Salle) -> None:
+async def traiter_segment(pcm: bytes, identite: str, salle: Salle) -> None:
     cibles = await salle.cibles()
     if not cibles:
         return
@@ -135,6 +127,17 @@ async def traiter_segment(pcm: bytes, salle: Salle) -> None:
                 continue
             diffusions.append((nom, audio))
 
+    # Sous-titres : le texte original et les traductions sont envoyés à tous les participants.
+    # Chacun ne retient que la langue qui le concerne.
+    try:
+        await salle.room.local_participant.publish_data(
+            sous_titre(identite, langue_source, texte, traductions),
+            reliable=True,
+            topic=SUJET_SOUS_TITRES,
+        )
+    except Exception as erreur:
+        log.warning("Sous-titres non envoyés : %s", erreur)
+
     taches = []
     for nom, audio in diffusions:
         source = await salle.source(nom)
@@ -145,14 +148,14 @@ async def traiter_segment(pcm: bytes, salle: Salle) -> None:
 
 async def boucle_traduction(file: asyncio.Queue, salle: Salle) -> None:
     while True:
-        pcm = await file.get()
+        pcm, identite = await file.get()
         try:
-            await traiter_segment(pcm, salle)
+            await traiter_segment(pcm, identite, salle)
         except Exception:
             log.exception("Erreur pendant la traduction d'un segment")
 
 
-async def ecouter(track: rtc.RemoteAudioTrack, file: asyncio.Queue) -> None:
+async def ecouter(track: rtc.RemoteAudioTrack, identite: str, file: asyncio.Queue) -> None:
     flux = rtc.AudioStream(track, sample_rate=FREQUENCE, num_channels=1)
     tampon = bytearray()
     silence = 0.0
@@ -177,12 +180,12 @@ async def ecouter(track: rtc.RemoteAudioTrack, file: asyncio.Queue) -> None:
         total = len(tampon) / (2 * FREQUENCE)
         if tampon and (silence >= SILENCE_FIN or total >= DUREE_MAX):
             if total - silence >= DUREE_MIN:
-                await file.put(bytes(tampon))
+                await file.put((bytes(tampon), identite))
             tampon.clear()
             silence = 0.0
 
     if tampon:
-        await file.put(bytes(tampon))
+        await file.put((bytes(tampon), identite))
 
 
 async def entrypoint(ctx: JobContext) -> None:
@@ -199,7 +202,7 @@ async def entrypoint(ctx: JobContext) -> None:
             return
         if participant.identity.startswith("agent"):
             return
-        asyncio.create_task(ecouter(track, file))
+        asyncio.create_task(ecouter(track, participant.identity, file))
 
 
 if __name__ == "__main__":

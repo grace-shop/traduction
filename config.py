@@ -10,6 +10,10 @@ LIVEKIT_URL = os.getenv("LIVEKIT_URL", "")
 LIVEKIT_API_KEY = os.getenv("LIVEKIT_API_KEY", "")
 LIVEKIT_API_SECRET = os.getenv("LIVEKIT_API_SECRET", "")
 
+# Mot de passe demandé à chaque participant pour rejoindre un appel.
+# Obligatoire : sans lui, le serveur refuse de délivrer des jetons.
+MOT_DE_PASSE_APPEL = os.getenv("MOT_DE_PASSE_APPEL", "")
+
 # Langues reconnues par Whisper (codes ISO), proposées dans l'application.
 LANGUES = (
     "af am ar as az ba be bg bn bo br bs ca cs cy da de el en es et eu fa fi fo fr "

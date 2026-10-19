@@ -1,0 +1,5 @@
+# Reverse proxy HTTPS. Caddy obtient et renouvelle le certificat automatiquement.
+# Lancer : DOMAINE=appel.votre-domaine.fr caddy run --config deploy/Caddyfile
+{$DOMAINE} {
+	reverse_proxy 127.0.0.1:8000
+}
