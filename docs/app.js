@@ -139,7 +139,8 @@ function rafraichirParticipants() {
   $("compteur").textContent = t(n > 1 ? "compteur_plusieurs" : "compteur_un", { n });
 }
 
-function ajouterBulle(auteur, texte, moi) {
+// Une bulle : le nom, la traduction, et le texte original en retrait quand il est différent.
+function ajouterBulle(auteur, texte, moi, original = null) {
   const conteneur = $("sous-titres");
   const bulle = document.createElement("div");
   bulle.className = "bulle" + (moi ? " moi" : "");
@@ -148,10 +149,17 @@ function ajouterBulle(auteur, texte, moi) {
   nom.textContent = auteur;
   bulle.appendChild(nom);
   bulle.appendChild(document.createTextNode(texte));
+  if (original && original !== texte) {
+    const source = document.createElement("span");
+    source.className = "original";
+    source.textContent = original;
+    bulle.appendChild(source);
+  }
   conteneur.appendChild(bulle);
   while (conteneur.children.length > MAX_BULLES) conteneur.removeChild(conteneur.firstChild);
   conteneur.scrollTop = conteneur.scrollHeight;
   historique.push({ heure: new Date().toTimeString().slice(0, 5), auteur, texte });
+  return bulle;
 }
 
 // Vidéos : une tuile par flux (la mienne en miroir, celles des autres telles quelles).
@@ -264,8 +272,9 @@ async function traduire(texte, de, vers) {
 }
 
 // Les traductions sont lues les unes après les autres, jamais en même temps.
-function lireEnFile(texte) {
-  fileLecture.push(texte);
+// La bulle correspondante s'allume pendant que la voix IA la lit.
+function lireEnFile(texte, bulle = null) {
+  fileLecture.push({ texte, bulle });
   if (!enLecture) lireSuivante();
 }
 
@@ -277,8 +286,13 @@ function lireSuivante() {
   }
   enLecture = true;
   Plateforme.suspendreEcoute();
-  const texte = fileLecture.shift();
-  Plateforme.parler(texte, maLangueBcp, $("voix").value, lireSuivante, reglages);
+  const { texte, bulle } = fileLecture.shift();
+  if (bulle) bulle.classList.add("lecture");
+  const fin = () => {
+    if (bulle) bulle.classList.remove("lecture");
+    lireSuivante();
+  };
+  Plateforme.parler(texte, maLangueBcp, $("voix").value, fin, reglages);
 }
 
 // ---------- Messages ----------
@@ -306,9 +320,9 @@ function recevoirTexte(donnees, participant) {
   }
   traduire(message.texte, message.langue, maLangue)
     .then((traduit) => {
-      ajouterBulle(auteur, traduit, false);
+      const bulle = ajouterBulle(auteur, traduit, false, message.texte);
       dernierTexte = traduit;
-      lireEnFile(traduit);
+      lireEnFile(traduit, bulle);
     })
     .catch((erreur) => {
       if (erreur.message === "quota") {
