@@ -1,0 +1,21 @@
+# Déploiement en un clic sur Render : New > Blueprint > choisir ce dépôt et la branche.
+# Les valeurs marquées sync: false sont demandées au moment de la création.
+services:
+  - type: web
+    name: appel-traduit
+    runtime: docker
+    plan: starter
+    healthCheckPath: /
+    envVars:
+      - key: LIVEKIT_URL
+        sync: false
+      - key: LIVEKIT_API_KEY
+        sync: false
+      - key: LIVEKIT_API_SECRET
+        sync: false
+      - key: MOT_DE_PASSE_APPEL
+        sync: false
+      - key: MODELE_WHISPER
+        value: small
+      - key: LANGUE_CIBLE
+        value: fr

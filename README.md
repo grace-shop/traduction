@@ -88,3 +88,30 @@ conforme à votre cadre légal (RGPD notamment).
 - [ ] Traduction de secours (DeepL ou autre) si MyMemory est indisponible
 - [ ] Applications natives téléphone et ordinateur (aujourd'hui : page web)
 - [ ] Reconnexion automatique après une coupure réseau
+
+## Utiliser l'application en ligne (sans rien lancer sur votre ordinateur)
+
+L'application tourne sur un serveur. Chacun l'ouvre avec un lien, sur téléphone ou ordinateur,
+et peut l'installer comme application (« Ajouter à l'écran d'accueil »).
+
+Ce qu'il faut créer une seule fois :
+
+1. **LiveKit Cloud** (https://cloud.livekit.io) : créez un projet et notez `LIVEKIT_URL`,
+   `LIVEKIT_API_KEY` et `LIVEKIT_API_SECRET`.
+2. **Render** (https://render.com) : connectez votre compte GitHub, puis
+   *New > Blueprint*, choisissez le dépôt et la branche. Le fichier `render.yaml` crée le service.
+3. Renseignez les quatre valeurs demandées : les trois identifiants LiveKit et
+   `MOT_DE_PASSE_APPEL`.
+
+Render donne une adresse en HTTPS (`https://appel-traduit.onrender.com` ou similaire).
+Partagez-la avec les participants, avec le mot de passe de l'appel.
+
+Points à savoir :
+
+- L'agent de traduction et la page web tournent dans le même service. Il faut un plan payant
+  qui reste allumé en permanence : sur un plan gratuit, le service se met en veille et
+  les appels ne sont plus traduits.
+- Le premier démarrage télécharge le modèle Whisper, il peut prendre plusieurs minutes.
+- Le modèle `small` demande de la mémoire vive : vérifiez que le plan choisi suffit.
+- Le conteneur n'a pas encore été construit ni testé ici : au premier déploiement, regardez
+  les journaux Render.
