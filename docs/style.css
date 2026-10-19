@@ -106,6 +106,10 @@ input:disabled, select:disabled { opacity: .5; }
   color: var(--doux);
   cursor: pointer;
 }
+.consentement input[type="checkbox"] {
+  -webkit-appearance: checkbox; appearance: auto;
+  accent-color: var(--accent);
+}
 .consentement input {
   width: 18px;
   height: 18px;
