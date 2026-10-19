@@ -2,82 +2,210 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Politique de confidentialité : Appel traduit</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Confidentialité : Appel traduit</title>
+  <meta name="description" content="Ce que fait Appel traduit avec vos données, en clair.">
+  <meta name="theme-color" content="#04050b">
+  <link rel="icon" href="icone.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600&family=Inter:wght@400;500;600&display=swap">
   <link rel="stylesheet" href="style.css">
   <style>
     body { display: block; }
-    .texte { max-width: 760px; margin: 0 auto; padding: 32px 20px 60px; line-height: 1.6; }
-    .texte h1 { font-size: 1.6rem; margin: 0 0 8px; }
-    .texte h2 { font-size: 1.1rem; margin: 28px 0 8px; color: var(--accent); }
-    .texte p, .texte li { color: #d8dded; font-size: .95rem; }
-    .texte .a-completer { background: rgba(251, 113, 133, .15); padding: 0 4px; border-radius: 4px; }
-    .retour { display: inline-block; margin-bottom: 18px; font-size: .9rem; }
+    .page { max-width: 820px; margin: 0 auto; padding: 28px 22px 80px; }
+
+    .haut { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 44px; }
+    .marque { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--texte); font-family: "Sora", "Inter", sans-serif; font-weight: 600; }
+    .marque img { width: 34px; height: 34px; filter: drop-shadow(0 0 14px color-mix(in srgb, var(--aurore) 35%, transparent)); }
+    .retour { font-size: .9rem; color: var(--doux); text-decoration: none; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--bordure); background: var(--verre); }
+    .retour:hover { color: var(--texte); }
+
+    h1 {
+      margin: 0 0 14px;
+      font-family: "Sora", "Inter", sans-serif;
+      font-size: clamp(2rem, 5vw, 2.9rem);
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+    }
+    .intro { margin: 0; font-size: 1.05rem; color: var(--doux); max-width: 60ch; }
+    .maj { margin: 18px 0 0; font-size: .85rem; color: var(--discret); }
+
+    .resume {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
+      margin: 36px 0 12px; padding: 0; list-style: none;
+    }
+    .resume li {
+      padding: 18px 18px 16px; border-radius: 18px;
+      background: var(--verre); border: 1px solid var(--bordure);
+    }
+    .resume strong { display: block; font-family: "Sora", "Inter", sans-serif; font-size: 1rem; font-weight: 600; margin-bottom: 4px; }
+    .resume span { font-size: .9rem; color: var(--doux); line-height: 1.5; }
+
+    section { margin-top: 44px; padding-top: 28px; border-top: 1px solid var(--bordure-douce); }
+    h2 {
+      margin: 0 0 14px;
+      font-family: "Sora", "Inter", sans-serif;
+      font-size: 1.22rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+    p, li { font-size: .97rem; line-height: 1.7; color: var(--texte); }
+    p { margin: 0 0 12px; }
+    ul { margin: 0; padding-left: 20px; }
+    li { margin-bottom: 8px; }
+    li::marker { color: var(--aurore); }
+    strong { font-weight: 600; }
+    a { color: var(--aurore); }
+
+    .tableau-wrap { overflow-x: auto; border-radius: 18px; border: 1px solid var(--bordure); background: var(--verre); margin: 6px 0 4px; }
+    table { width: 100%; border-collapse: collapse; font-size: .9rem; min-width: 520px; }
+    th, td { text-align: left; padding: 13px 16px; vertical-align: top; border-bottom: 1px solid var(--bordure-douce); }
+    th { font-family: "Sora", "Inter", sans-serif; font-weight: 600; color: var(--doux); font-size: .82rem; }
+    tr:last-child td { border-bottom: 0; }
+    td { color: var(--texte); line-height: 1.5; }
+
+    /* Champs à compléter avant publication : bien visibles, pour ne rien oublier */
+    .a-completer {
+      display: inline-block; padding: 1px 8px; border-radius: 8px;
+      font-size: .88em; color: var(--ambre);
+      background: color-mix(in srgb, var(--ambre) 12%, transparent);
+      border: 1px dashed color-mix(in srgb, var(--ambre) 60%, transparent);
+    }
+
+    .note {
+      margin-top: 44px; padding: 18px 20px; border-radius: 18px;
+      background: color-mix(in srgb, var(--ambre) 7%, transparent);
+      border: 1px solid color-mix(in srgb, var(--ambre) 30%, transparent);
+      font-size: .9rem; line-height: 1.6; color: var(--doux);
+    }
+
+    @media (max-width: 620px) {
+      .resume { grid-template-columns: 1fr; }
+      .haut { margin-bottom: 30px; }
+      table { min-width: 0; font-size: .85rem; }
+      th, td { padding: 11px 12px; }
+      th:first-child, td:first-child { width: 34%; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
   </style>
 </head>
 <body>
-  <main class="texte">
-    <a class="retour" href="index.html">← Retour à l'appel</a>
-    <h1>Politique de confidentialité</h1>
-    <p>Dernière mise à jour : <span class="a-completer">[date]</span></p>
+  <div class="page">
+    <header class="haut">
+      <a class="marque" href="index.html"><img src="icone.svg" alt="" aria-hidden="true">Appel traduit</a>
+      <a class="retour" href="index.html">Retour à l'appel</a>
+    </header>
 
-    <h2>Qui est responsable</h2>
-    <p>Cette application est éditée par <span class="a-completer">[nom ou raison sociale]</span>.
-    Contact : <span class="a-completer">[adresse électronique]</span>.</p>
+    <h1>Confidentialité</h1>
+    <p class="intro">Ce qui se passe avec vos données pendant un appel, dit simplement. Pas de compte, pas de publicité, pas d'enregistrement.</p>
+    <p class="maj">Dernière mise à jour : <span class="a-completer">[date]</span></p>
 
-    <h2>Ce que fait l'application</h2>
-    <p>Appel traduit permet à des personnes qui parlent des langues différentes de se parler : chacun
-    parle dans sa langue, et les autres reçoivent le message traduit et lu à voix haute, avec des sous-titres.</p>
-
-    <h2>Les données traitées pendant un appel</h2>
-    <ul>
-      <li><strong>Votre voix</strong> : elle est reconnue par le moteur de reconnaissance vocale de votre appareil
-      (navigateur ou téléphone). Selon l'appareil et le navigateur, ce moteur peut envoyer l'audio à un fournisseur
-      (par exemple Google dans Chrome). L'application n'enregistre pas votre voix.</li>
-      <li><strong>Le texte reconnu</strong> : il est envoyé aux autres participants de l'appel, via LiveKit
-      (<span class="a-completer">hébergement choisi</span>), puis traduit par le service MyMemory si la langue
-      de l'auditeur est différente.</li>
-      <li><strong>Votre nom affiché et le nom de la salle</strong> : ils sont visibles des autres participants
-      de la salle.</li>
-      <li><strong>Votre langue et la voix de lecture choisies</strong> : elles ne sont conservées que pendant l'appel.</li>
-      <li><strong>Données techniques</strong> : pour obtenir l'accès à l'appel, une adresse IP et l'heure de la
-      demande sont traitées par le service qui délivre les accès (Cloudflare Workers), notamment pour limiter les
-      tentatives répétées.</li>
+    <ul class="resume">
+      <li><strong>Votre voix n'est pas enregistrée</strong><span>Elle est transformée en texte par votre appareil, puis le son n'est pas gardé.</span></li>
+      <li><strong>Les messages ne sont pas conservés</strong><span>Le texte disparaît à la fin de l'appel, sauf si vous le téléchargez vous-même.</span></li>
+      <li><strong>Aucun compte à créer</strong><span>Un nom affiché suffit. Il n'est lié à rien d'autre.</span></li>
+      <li><strong>Pas de publicité ni de suivi</strong><span>Vos données ne servent ni à la publicité, ni à établir un profil.</span></li>
     </ul>
 
-    <h2>Ce que l'application ne fait pas</h2>
-    <ul>
-      <li>Elle n'enregistre pas l'audio de vos appels.</li>
-      <li>Elle ne conserve pas le texte des messages après l'appel.</li>
-      <li>Elle n'utilise pas de compte utilisateur, et n'a pas de publicité ni de suivi publicitaire.</li>
-    </ul>
+    <section>
+      <h2>Qui est responsable</h2>
+      <p>Cette application est éditée par <span class="a-completer">[nom ou raison sociale]</span>.
+      Pour toute question : <span class="a-completer">[adresse électronique]</span>.</p>
+    </section>
 
-    <h2>Base légale</h2>
-    <p>Le traitement repose sur votre consentement, donné à chaque appel par la case à cocher. Vous pouvez le retirer
-    à tout moment en quittant l'appel et en ne le rejoignant plus.</p>
+    <section>
+      <h2>Ce que fait l'application</h2>
+      <p>Appel traduit permet à des personnes qui parlent des langues différentes de se parler. Chacun parle dans sa
+      langue, et les autres reçoivent le message traduit, lu à voix haute et affiché en sous-titres.</p>
+    </section>
 
-    <h2>Services tiers et transferts hors de l'Union européenne</h2>
-    <ul>
-      <li>LiveKit (transmission audio et messages), Cloudflare (accès à l'appel), MyMemory (traduction),
-      et le moteur de reconnaissance et de lecture de votre appareil.</li>
-      <li>Certains de ces services sont hébergés hors de l'Union européenne. Ils garantissent un niveau de protection
-      encadré par les mécanismes prévus par le RGPD. <span class="a-completer">[à vérifier avant publication]</span></li>
-    </ul>
+    <section>
+      <h2>Les données traitées pendant un appel</h2>
+      <div class="tableau-wrap">
+        <table>
+          <thead>
+            <tr><th>Donnée</th><th>Qui la traite</th><th>Combien de temps</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Votre voix</td>
+              <td>Le moteur de reconnaissance de votre appareil ou navigateur. Dans Chrome, l'audio peut être envoyé à Google.</td>
+              <td>Pas gardée par l'application.</td>
+            </tr>
+            <tr>
+              <td>Le texte de vos phrases</td>
+              <td>Envoyé aux participants via LiveKit, puis traduit par MyMemory pour chaque auditeur.</td>
+              <td>Pendant l'appel seulement.</td>
+            </tr>
+            <tr>
+              <td>Votre nom et le nom de la salle</td>
+              <td>Visibles des autres participants de la salle.</td>
+              <td>Pendant l'appel seulement.</td>
+            </tr>
+            <tr>
+              <td>Votre langue et votre voix de lecture</td>
+              <td>Gardées sur votre appareil pour vos réglages.</td>
+              <td>Jusqu'à ce que vous les effaciez.</td>
+            </tr>
+            <tr>
+              <td>Adresse IP et heure de demande</td>
+              <td>Le service qui délivre les accès à l'appel (Cloudflare Workers), pour limiter les tentatives répétées.</td>
+              <td><span class="a-completer">[durée à préciser]</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
 
-    <h2>Durée de conservation</h2>
-    <p>L'application ne conserve aucune donnée de vos appels après leur fin. Les journaux techniques du service
-    d'accès sont conservés selon la politique du fournisseur (<span class="a-completer">durée à préciser</span>).</p>
+    <section>
+      <h2>Ce que l'application ne fait pas</h2>
+      <ul>
+        <li>Elle n'enregistre ni la voix, ni la vidéo de vos appels.</li>
+        <li>Elle ne conserve pas le texte des messages après l'appel.</li>
+        <li>Elle n'utilise pas de compte utilisateur, ni de publicité, ni de suivi publicitaire.</li>
+      </ul>
+    </section>
 
-    <h2>Vos droits</h2>
-    <p>Vous pouvez demander l'accès, la rectification ou l'effacement des données vous concernant, et vous opposer
-    à leur traitement, en écrivant à <span class="a-completer">[adresse électronique]</span>. Vous pouvez aussi
-    saisir la CNIL (www.cnil.fr).</p>
+    <section>
+      <h2>Base légale</h2>
+      <p>Le traitement repose sur votre consentement, donné à chaque appel par la case à cocher. Vous pouvez le retirer
+      à tout moment : quittez l'appel et ne le rejoignez plus.</p>
+    </section>
 
-    <h2>Sécurité</h2>
-    <p>Les échanges passent par une connexion chiffrée (HTTPS et WebRTC). L'accès à un appel est protégé par un mot de
-    passe, que seuls les participants doivent connaître.</p>
+    <section>
+      <h2>Services tiers et transferts hors de l'Union européenne</h2>
+      <p>Les services utilisés sont LiveKit (transmission de l'appel), Cloudflare (accès à l'appel), MyMemory
+      (traduction), et le moteur de reconnaissance et de lecture de votre appareil.</p>
+      <p>Certains de ces services sont hébergés hors de l'Union européenne. Les transferts sont encadrés par les
+      mécanismes prévus par le RGPD. <span class="a-completer">[à vérifier avant publication]</span></p>
+    </section>
 
-    <p class="a-completer">Ce document doit être relu par une personne compétente en droit des données avant toute publication.</p>
-  </main>
+    <section>
+      <h2>Vos droits</h2>
+      <p>Vous pouvez demander l'accès, la rectification ou l'effacement des données vous concernant, et vous opposer à
+      leur traitement, en écrivant à <span class="a-completer">[adresse électronique]</span>. Vous pouvez aussi saisir
+      la CNIL, sur <a href="https://www.cnil.fr" target="_blank" rel="noopener">cnil.fr</a>.</p>
+    </section>
+
+    <section>
+      <h2>Sécurité</h2>
+      <p>Les échanges passent par une connexion chiffrée (HTTPS et WebRTC). Chaque appel reçoit un accès temporaire,
+      délivré après vérification d'un mot de passe commun. Ce mot de passe protège contre les accès fortuits, mais il
+      n'est pas un secret fort : ne partagez pas d'informations sensibles pendant un appel.</p>
+    </section>
+
+    <p class="note">Ce document doit être relu par une personne compétente en droit des données avant toute publication
+    auprès de vrais participants. Les champs en pointillés orange restent à compléter.</p>
+  </div>
+
+  <script>
+    // Le thème choisi dans l'application s'applique aussi à cette page.
+    try {
+      const reglages = JSON.parse(localStorage.getItem("reglages") || "{}");
+      if (reglages.theme) document.body.dataset.theme = reglages.theme;
+    } catch { /* stockage indisponible : thème par défaut */ }
+  </script>
 </body>
 </html>

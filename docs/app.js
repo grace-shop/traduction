@@ -43,8 +43,10 @@ function lireReglages() {
     const brut = JSON.parse(localStorage.getItem("reglages") || "{}");
     reglages = Outils.normaliserReglages(brut);
     reglages.interface = brut && typeof brut.interface === "string" ? brut.interface : null;
+    reglages.theme = brut && THEMES.includes(brut.theme) ? brut.theme : "nuit";
   } catch {
     reglages = Outils.normaliserReglages({});
+    reglages.theme = "nuit";
   }
 }
 
@@ -60,7 +62,14 @@ function appliquerReglages() {
   corps.classList.toggle("sous-titres-masques", reglages.masquer);
   corps.classList.remove("taille-petite", "taille-normale", "taille-grande");
   corps.classList.add(`taille-${reglages.taille}`);
+  const theme = THEMES.includes(reglages.theme) ? reglages.theme : "nuit";
+  $("theme").value = theme;
+  corps.dataset.theme = theme;
+  document.dispatchEvent(new Event("themechange"));
 }
+
+// Thèmes : chacun redéfinit les couleurs dans style.css.
+const THEMES = ["nuit", "aurore", "ocean", "emeraude", "clair"];
 
 // ---------- Affichage ----------
 
@@ -682,3 +691,4 @@ $("vitesse").addEventListener("input", (e) => { reglages.vitesse = Number(e.targ
 $("volume").addEventListener("input", (e) => { reglages.volume = Number(e.target.value); sauverReglages(); });
 $("taille").addEventListener("change", (e) => { reglages.taille = e.target.value; sauverReglages(); appliquerReglages(); });
 $("masquer").addEventListener("change", (e) => { reglages.masquer = e.target.checked; sauverReglages(); appliquerReglages(); });
+$("theme").addEventListener("change", (e) => { reglages.theme = e.target.value; sauverReglages(); appliquerReglages(); });

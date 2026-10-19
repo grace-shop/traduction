@@ -5,6 +5,7 @@
 
   const TEXTES = {
     fr: {
+      reglage_theme: "Thème", theme_nuit: "Nuit", theme_aurore: "Aurore", theme_ocean: "Océan", theme_emeraude: "Émeraude", theme_clair: "Clair",
       titre: "Appel traduit", sous_titre: "Parlez votre langue, tout le monde comprend.",
       champ_nom: "Votre nom", ex_nom: "Ex. Awa", champ_langue: "Votre langue", champ_voix: "Voix de lecture",
       champ_salle: "Nom de la salle", ex_salle: "Ex. reunion-famille", champ_mdp: "Mot de passe de l'appel",
@@ -40,6 +41,7 @@
       st_camera_on: "Caméra activée.", st_camera_off: "Caméra coupée.", st_camera_err: "La caméra n'est pas accessible.",
     },
     en: {
+      reglage_theme: "Theme", theme_nuit: "Night", theme_aurore: "Aurora", theme_ocean: "Ocean", theme_emeraude: "Emerald", theme_clair: "Light",
       titre: "Translated Call", sous_titre: "Speak your language, everyone understands.",
       champ_nom: "Your name", ex_nom: "E.g. Awa", champ_langue: "Your language", champ_voix: "Playback voice",
       champ_salle: "Room name", ex_salle: "E.g. family-meeting", champ_mdp: "Call password",
@@ -75,6 +77,7 @@
       st_camera_on: "Camera on.", st_camera_off: "Camera off.", st_camera_err: "The camera is not available.",
     },
     es: {
+      reglage_theme: "Tema", theme_nuit: "Noche", theme_aurore: "Aurora", theme_ocean: "Océano", theme_emeraude: "Esmeralda", theme_clair: "Claro",
       titre: "Llamada traducida", sous_titre: "Habla tu idioma, todos lo entienden.",
       champ_nom: "Tu nombre", ex_nom: "Ej. Awa", champ_langue: "Tu idioma", champ_voix: "Voz de lectura",
       champ_salle: "Nombre de la sala", ex_salle: "Ej. reunion-familia", champ_mdp: "Contraseña de la llamada",
@@ -110,6 +113,7 @@
       st_camera_on: "Cámara activada.", st_camera_off: "Cámara desactivada.", st_camera_err: "La cámara no está disponible.",
     },
     pt: {
+      reglage_theme: "Tema", theme_nuit: "Noite", theme_aurore: "Aurora", theme_ocean: "Oceano", theme_emeraude: "Esmeralda", theme_clair: "Claro",
       titre: "Chamada traduzida", sous_titre: "Fale a sua língua, todos entendem.",
       champ_nom: "Seu nome", ex_nom: "Ex. Awa", champ_langue: "Seu idioma", champ_voix: "Voz de leitura",
       champ_salle: "Nome da sala", ex_salle: "Ex. reuniao-familia", champ_mdp: "Senha da chamada",
@@ -145,6 +149,7 @@
       st_camera_on: "Câmera ativada.", st_camera_off: "Câmera desligada.", st_camera_err: "A câmera não está disponível.",
     },
     de: {
+      reglage_theme: "Design", theme_nuit: "Nacht", theme_aurore: "Aurora", theme_ocean: "Ozean", theme_emeraude: "Smaragd", theme_clair: "Hell",
       titre: "Übersetzter Anruf", sous_titre: "Sprich deine Sprache, alle verstehen dich.",
       champ_nom: "Dein Name", ex_nom: "Z. B. Awa", champ_langue: "Deine Sprache", champ_voix: "Wiedergabestimme",
       champ_salle: "Raumname", ex_salle: "Z. B. familientreffen", champ_mdp: "Anrufpasswort",
@@ -180,6 +185,7 @@
       st_camera_on: "Kamera an.", st_camera_off: "Kamera aus.", st_camera_err: "Die Kamera ist nicht verfügbar.",
     },
     ar: {
+      reglage_theme: "المظهر", theme_nuit: "ليلي", theme_aurore: "شفق", theme_ocean: "محيط", theme_emeraude: "زمردي", theme_clair: "فاتح",
       titre: "مكالمة مترجمة", sous_titre: "تكلم لغتك، والجميع يفهم.",
       champ_nom: "اسمك", ex_nom: "مثال: أمينة", champ_langue: "لغتك", champ_voix: "صوت القراءة",
       champ_salle: "اسم الغرفة", ex_salle: "مثال: اجتماع-العائلة", champ_mdp: "كلمة مرور المكالمة",
