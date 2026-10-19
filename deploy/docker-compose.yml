@@ -1,0 +1,29 @@
+# Lancement : docker compose -f deploy/docker-compose.yml --env-file .env up -d --build
+services:
+  appel:
+    build: ..
+    env_file: ../.env
+    environment:
+      PORT: "8000"
+    expose:
+      - "8000"
+    restart: always
+
+  caddy:
+    image: caddy:2
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAINE: ${DOMAINE}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_donnees:/data
+      - caddy_config:/config
+    depends_on:
+      - appel
+    restart: always
+
+volumes:
+  caddy_donnees:
+  caddy_config:

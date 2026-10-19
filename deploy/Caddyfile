@@ -1,5 +1,4 @@
-# Reverse proxy HTTPS. Caddy obtient et renouvelle le certificat automatiquement.
-# Lancer : DOMAINE=appel.votre-domaine.fr caddy run --config deploy/Caddyfile
+# HTTPS automatique (Let's Encrypt). Utilisé par deploy/docker-compose.yml.
 {$DOMAINE} {
-	reverse_proxy 127.0.0.1:8000
+	reverse_proxy appel:8000
 }

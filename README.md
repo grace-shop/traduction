@@ -10,58 +10,63 @@ Le système est composé de trois parties :
   après vérification du mot de passe, et liste les voix disponibles.
 - `agent.py` : agent LiveKit. Il écoute chaque participant, transcrit (Whisper), traduit
   (MyMemory), synthétise (edge-tts), publie les traductions audio et les sous-titres.
-- `web/index.html` : page d'appel, utilisable sur ordinateur et sur téléphone via le navigateur.
+- `web/index.html` : page d'appel, installable comme application sur téléphone et ordinateur.
 
-## Installation
+## Utiliser l'application en ligne
 
-    python -m venv .venv
-    source .venv/bin/activate        # Windows : .venv\Scripts\activate
-    pip install -r requirements.txt
-    cp .env.example .env
+L'application est hébergée sur un serveur. Chacun l'ouvre avec un lien (HTTPS), sur téléphone
+ou ordinateur, et peut l'installer comme application (« Ajouter à l'écran d'accueil »).
+Rien à installer ni à lancer de son côté.
 
-Renseignez `.env` : identifiants LiveKit et `MOT_DE_PASSE_APPEL` (obligatoire, le serveur
-refuse de délivrer des jetons sans lui).
+## Déploiement gratuit sur Oracle Cloud
 
-## Lancer l'application en local
+Ce qui est nécessaire, et gratuit tant que l'on reste dans les limites :
 
-Dans deux terminaux :
+1. **Serveur Oracle Cloud « Always Free »** : une instance Ubuntu, forme Ampere A1 (ARM),
+   2 cœurs et 12 Go de RAM. Ouvrez les ports 22 (SSH), 80 et 443 dans la liste de sécurité du réseau.
+2. **Nom de domaine gratuit** sur DuckDNS (https://www.duckdns.org) : créez un sous-domaine
+   qui pointe vers l'adresse IP publique du serveur.
+3. **Projet LiveKit Cloud** (https://cloud.livekit.io, plan gratuit) : notez `LIVEKIT_URL`,
+   `LIVEKIT_API_KEY` et `LIVEKIT_API_SECRET`.
 
-    python agent.py dev
-    uvicorn serveur:app --host 127.0.0.1 --port 8000
+Puis, connecté en SSH au serveur :
 
-Puis ouvrez `http://localhost:8000` dans deux onglets, choisissez une langue et une voix
-différentes dans chacun, saisissez le même nom de salle et le mot de passe.
+    wget https://raw.githubusercontent.com/grace-shop/traduction/<branche>/deploy/installer.sh
+    bash installer.sh <branche> <votre-domaine.duckdns.org>
 
-## Mise en production (HTTPS)
+Le premier passage crée le fichier `~/traduction/.env` et s'arrête. Renseignez-le
+(`LIVEKIT_*`, `MOT_DE_PASSE_APPEL`), puis relancez la même commande.
 
-Le micro du navigateur n'est accessible qu'en HTTPS (ou sur `localhost`). Le dossier
-`deploy/` contient une configuration Caddy qui obtient automatiquement un certificat.
+Le script installe Docker, ouvre les ports 80 et 443, construit l'application et lance deux
+conteneurs : l'application et Caddy, qui obtient le certificat HTTPS automatiquement.
+Les conteneurs redémarrent seuls après une coupure.
 
-Prérequis : un nom de domaine pointant vers votre serveur, et les ports 80 et 443 ouverts.
+Commandes utiles sur le serveur :
 
-    DOMAINE=appel.votre-domaine.fr caddy run --config deploy/Caddyfile
-    uvicorn serveur:app --host 127.0.0.1 --port 8000
-    python agent.py start
+    cd ~/traduction
+    sudo docker compose -f deploy/docker-compose.yml logs -f        # journaux
+    sudo docker compose -f deploy/docker-compose.yml restart appel  # redémarrer l'application
 
-Les trois commandes doivent tourner en continu (par exemple avec systemd ou un gestionnaire
-de processus).
+Points à savoir :
 
-## Utilisation en ligne de commande
+- Oracle demande une carte bancaire pour vérifier l'identité, sans facturer tant que l'on reste
+  dans les limites gratuites. Vérifiez les conditions avant de vous inscrire.
+- Le premier démarrage télécharge le modèle Whisper, il peut prendre plusieurs minutes.
+- Sur ce serveur, Whisper `small` peut être lent : si le délai de traduction est trop long,
+  passez à `MODELE_WHISPER=base` dans `.env`.
+- Les instances ARM sont parfois indisponibles dans certaines régions : essayez une autre
+  région ou réessayez plus tard.
 
-    python main.py chemin/vers/audio.wav
-
-Traite un fichier audio unique et écrit la traduction dans `sortie.mp3`.
-
-## Tests
+## Vérifier la logique sans serveur
 
     python -m unittest discover -s tests -v
 
 Les tests couvrent la validation des langues et des voix, la vérification du mot de passe,
 les noms de pistes et le format des sous-titres. Ils n'ont pas besoin de LiveKit ni de Whisper.
 
-## Vérification manuelle avant un appel réel
+## Vérification manuelle après déploiement
 
-Les tests ne couvrent pas l'audio. À faire avant de s'en servir :
+Les tests ne couvrent pas l'audio. À faire après chaque déploiement :
 
 1. Deux personnes, deux langues différentes, dans la même salle.
 2. Chacune parle : l'autre entend la traduction dans sa langue, avec la voix choisie.
@@ -71,7 +76,7 @@ Les tests ne couvrent pas l'audio. À faire avant de s'en servir :
 
 ## Confidentialité
 
-La voix et le texte transcrit sont envoyés à des services tiers : Whisper (exécuté localement),
+La voix et le texte transcrit sont envoyés à des services tiers : Whisper (exécuté sur le serveur),
 MyMemory (traduction) et Microsoft via edge-tts (synthèse vocale). La page demande le
 consentement des participants avant de rejoindre un appel. Vérifiez que cet usage est
 conforme à votre cadre légal (RGPD notamment).
@@ -83,35 +88,9 @@ conforme à votre cadre légal (RGPD notamment).
 - [x] Mot de passe d'appel
 - [x] Sous-titres
 - [x] Consentement des participants
-- [x] Configuration HTTPS (Caddy)
+- [x] HTTPS (Caddy)
+- [x] Installation sur serveur (Oracle Cloud)
 - [ ] Détection d'activité vocale (Silero VAD)
 - [ ] Traduction de secours (DeepL ou autre) si MyMemory est indisponible
-- [ ] Applications natives téléphone et ordinateur (aujourd'hui : page web)
+- [ ] Applications natives téléphone et ordinateur (aujourd'hui : application web installable)
 - [ ] Reconnexion automatique après une coupure réseau
-
-## Utiliser l'application en ligne (sans rien lancer sur votre ordinateur)
-
-L'application tourne sur un serveur. Chacun l'ouvre avec un lien, sur téléphone ou ordinateur,
-et peut l'installer comme application (« Ajouter à l'écran d'accueil »).
-
-Ce qu'il faut créer une seule fois :
-
-1. **LiveKit Cloud** (https://cloud.livekit.io) : créez un projet et notez `LIVEKIT_URL`,
-   `LIVEKIT_API_KEY` et `LIVEKIT_API_SECRET`.
-2. **Render** (https://render.com) : connectez votre compte GitHub, puis
-   *New > Blueprint*, choisissez le dépôt et la branche. Le fichier `render.yaml` crée le service.
-3. Renseignez les quatre valeurs demandées : les trois identifiants LiveKit et
-   `MOT_DE_PASSE_APPEL`.
-
-Render donne une adresse en HTTPS (`https://appel-traduit.onrender.com` ou similaire).
-Partagez-la avec les participants, avec le mot de passe de l'appel.
-
-Points à savoir :
-
-- L'agent de traduction et la page web tournent dans le même service. Il faut un plan payant
-  qui reste allumé en permanence : sur un plan gratuit, le service se met en veille et
-  les appels ne sont plus traduits.
-- Le premier démarrage télécharge le modèle Whisper, il peut prendre plusieurs minutes.
-- Le modèle `small` demande de la mémoire vive : vérifiez que le plan choisi suffit.
-- Le conteneur n'a pas encore été construit ni testé ici : au premier déploiement, regardez
-  les journaux Render.
