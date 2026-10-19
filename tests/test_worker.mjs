@@ -116,4 +116,13 @@ let groupes = 0;
   groupes++;
 }
 
+// 10. Valeurs non énumérables (cas réel de Cloudflare) : elles sont quand même lues.
+{
+  const cacheEnv = {};
+  for (const [cle, valeur] of Object.entries(env)) Object.defineProperty(cacheEnv, cle, { value: valeur, enumerable: false });
+  const r = await appel({ identite: "awa", salle: "salle", langue: "fr", motdepasse: env.MOT_DE_PASSE_APPEL }, { env: cacheEnv });
+  assert.equal(r.status, 200);
+  groupes++;
+}
+
 console.log(`OK : ${groupes} groupes de tests du service de jetons passent`);

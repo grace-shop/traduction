@@ -94,10 +94,13 @@ async function enregistrerEchec(ip, compte) {
 
 // Les valeurs saisies dans le tableau de bord peuvent contenir des espaces ou un retour à la
 // ligne en trop, qui font échouer la vérification chez LiveKit. On les retire ici.
+// Chaque variable est lue par son nom : Cloudflare ne les expose pas toutes à l'énumération.
+const NOMS_CONFIG = ["LIVEKIT_URL", "LIVEKIT_API_KEY", "LIVEKIT_API_SECRET", "MOT_DE_PASSE_APPEL", "ORIGINE_AUTORISEE"];
 function nettoyerEnv(env) {
-  const propre = {};
-  for (const [cle, valeur] of Object.entries(env)) {
-    propre[cle] = typeof valeur === "string" ? valeur.trim() : valeur;
+  const propre = { ...env };
+  for (const nom of NOMS_CONFIG) {
+    const valeur = env[nom];
+    propre[nom] = typeof valeur === "string" ? valeur.trim() : valeur;
   }
   return propre;
 }
