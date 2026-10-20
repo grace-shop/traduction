@@ -5,6 +5,7 @@
 
   const TEXTES = {
     fr: {
+      maj_dispo: "Une nouvelle version est disponible.", maj_maintenant: "Mettre à jour", maj_plus_tard: "Plus tard", maj_verifier: "Vérifier les mises à jour", maj_a_jour: "Vous avez la dernière version.", maj_erreur: "Impossible de vérifier pour l'instant.", maj_aucune: "Aucune version publiée pour l'instant.",
       reglage_theme: "Thème", theme_nuit: "Nuit", theme_aurore: "Aurore", theme_ocean: "Océan", theme_emeraude: "Émeraude", theme_clair: "Clair",
       titre: "Appel traduit", sous_titre: "Parlez votre langue, tout le monde comprend.",
       champ_nom: "Votre nom", ex_nom: "Ex. Awa", champ_langue: "Votre langue", champ_voix: "Voix de lecture",
@@ -41,6 +42,7 @@
       st_camera_on: "Caméra activée.", st_camera_off: "Caméra coupée.", st_camera_err: "La caméra n'est pas accessible.",
     },
     en: {
+      maj_dispo: "A new version is available.", maj_maintenant: "Update now", maj_plus_tard: "Later", maj_verifier: "Check for updates", maj_a_jour: "You have the latest version.", maj_erreur: "Unable to check right now.", maj_aucune: "No version published yet.",
       reglage_theme: "Theme", theme_nuit: "Night", theme_aurore: "Aurora", theme_ocean: "Ocean", theme_emeraude: "Emerald", theme_clair: "Light",
       titre: "Translated Call", sous_titre: "Speak your language, everyone understands.",
       champ_nom: "Your name", ex_nom: "E.g. Awa", champ_langue: "Your language", champ_voix: "Playback voice",
@@ -77,6 +79,7 @@
       st_camera_on: "Camera on.", st_camera_off: "Camera off.", st_camera_err: "The camera is not available.",
     },
     es: {
+      maj_dispo: "Hay una nueva versión disponible.", maj_maintenant: "Actualizar ahora", maj_plus_tard: "Más tarde", maj_verifier: "Buscar actualizaciones", maj_a_jour: "Tienes la última versión.", maj_erreur: "No se puede comprobar ahora.", maj_aucune: "Aún no hay versión publicada.",
       reglage_theme: "Tema", theme_nuit: "Noche", theme_aurore: "Aurora", theme_ocean: "Océano", theme_emeraude: "Esmeralda", theme_clair: "Claro",
       titre: "Llamada traducida", sous_titre: "Habla tu idioma, todos lo entienden.",
       champ_nom: "Tu nombre", ex_nom: "Ej. Awa", champ_langue: "Tu idioma", champ_voix: "Voz de lectura",
@@ -113,6 +116,7 @@
       st_camera_on: "Cámara activada.", st_camera_off: "Cámara desactivada.", st_camera_err: "La cámara no está disponible.",
     },
     pt: {
+      maj_dispo: "Há uma nova versão disponível.", maj_maintenant: "Atualizar agora", maj_plus_tard: "Mais tarde", maj_verifier: "Verificar atualizações", maj_a_jour: "Você está com a versão mais recente.", maj_erreur: "Não é possível verificar agora.", maj_aucune: "Nenhuma versão publicada ainda.",
       reglage_theme: "Tema", theme_nuit: "Noite", theme_aurore: "Aurora", theme_ocean: "Oceano", theme_emeraude: "Esmeralda", theme_clair: "Claro",
       titre: "Chamada traduzida", sous_titre: "Fale a sua língua, todos entendem.",
       champ_nom: "Seu nome", ex_nom: "Ex. Awa", champ_langue: "Seu idioma", champ_voix: "Voz de leitura",
@@ -149,6 +153,7 @@
       st_camera_on: "Câmera ativada.", st_camera_off: "Câmera desligada.", st_camera_err: "A câmera não está disponível.",
     },
     de: {
+      maj_dispo: "Eine neue Version ist verfügbar.", maj_maintenant: "Jetzt aktualisieren", maj_plus_tard: "Später", maj_verifier: "Auf Updates prüfen", maj_a_jour: "Du hast die neueste Version.", maj_erreur: "Prüfung im Moment nicht möglich.", maj_aucune: "Noch keine Version veröffentlicht.",
       reglage_theme: "Design", theme_nuit: "Nacht", theme_aurore: "Aurora", theme_ocean: "Ozean", theme_emeraude: "Smaragd", theme_clair: "Hell",
       titre: "Übersetzter Anruf", sous_titre: "Sprich deine Sprache, alle verstehen dich.",
       champ_nom: "Dein Name", ex_nom: "Z. B. Awa", champ_langue: "Deine Sprache", champ_voix: "Wiedergabestimme",
@@ -185,6 +190,7 @@
       st_camera_on: "Kamera an.", st_camera_off: "Kamera aus.", st_camera_err: "Die Kamera ist nicht verfügbar.",
     },
     ar: {
+      maj_dispo: "يتوفر إصدار جديد.", maj_maintenant: "تحديث الآن", maj_plus_tard: "لاحقًا", maj_verifier: "التحقق من التحديثات", maj_a_jour: "أنت تستخدم أحدث إصدار.", maj_erreur: "تعذّر التحقق الآن.", maj_aucune: "لم يُنشر أي إصدار بعد.",
       reglage_theme: "المظهر", theme_nuit: "ليلي", theme_aurore: "شفق", theme_ocean: "محيط", theme_emeraude: "زمردي", theme_clair: "فاتح",
       titre: "مكالمة مترجمة", sous_titre: "تكلم لغتك، والجميع يفهم.",
       champ_nom: "اسمك", ex_nom: "مثال: أمينة", champ_langue: "لغتك", champ_voix: "صوت القراءة",

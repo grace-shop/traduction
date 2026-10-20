@@ -39,6 +39,9 @@ jobs:
         run: |
           sed -i 's#</manifest>#    <uses-permission android:name="android.permission.RECORD_AUDIO" />\n    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />\n</manifest>#' android/app/src/main/AndroidManifest.xml
 
+      - name: Enregistrer l'identifiant de cette version
+        run: echo "window.BUILD_ID = \"${GITHUB_SHA}\";" > docs/build.js
+
       - name: Copier le site dans l'application
         run: npx cap sync android
 
@@ -61,3 +64,12 @@ jobs:
           cp android/app/build/outputs/apk/debug/app-debug.apk appel-traduit.apk
           gh release view apk-latest >/dev/null 2>&1 || gh release create apk-latest --title "Appel traduit (Android)" --notes "Dernière version de l'application Android. Téléchargez appel-traduit.apk, puis installez-le sur votre téléphone." --prerelease
           gh release upload apk-latest appel-traduit.apk --clobber
+          gh release edit apk-latest --notes "Build: ${GITHUB_SHA}"
+
+      - name: Mettre à jour l'identifiant du site (sans relancer le build)
+        if: github.event_name == 'push'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/build.js
+          git diff --cached --quiet || (git commit -m "Met à jour l'identifiant de version [skip ci]" && git push origin HEAD:${GITHUB_REF_NAME})

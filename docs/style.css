@@ -568,3 +568,33 @@ body.taille-grande .bulle { font-size: 1.12rem; }
 @media (prefers-reduced-motion: reduce) {
   .splash { animation: none; opacity: 0; visibility: hidden; }
 }
+
+/* Bandeau de mise à jour, en haut de l'écran */
+.maj {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+  z-index: 60;
+  width: min(560px, calc(100% - 24px));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 14px 12px 18px;
+  border-radius: 18px;
+  background: var(--verre-haut);
+  border: 1px solid color-mix(in srgb, var(--aurore) 40%, transparent);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  box-shadow: 0 20px 50px -18px rgba(0, 0, 0, .6);
+  font-size: .92rem;
+  color: var(--texte);
+  animation: apparait .4s ease both;
+}
+.maj[hidden] { display: none; }
+.maj-actions { display: flex; gap: 8px; }
+.maj-actions .bouton.petit { width: auto; padding: 9px 14px; }
+.maj-reglage .bouton { width: 100%; }

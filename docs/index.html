@@ -24,6 +24,15 @@
   <!-- Écran d'ouverture : le logo apparaît, puis s'efface tout seul (voir style.css) -->
   <div class="splash" aria-hidden="true"><img src="icone.svg" alt=""></div>
 
+  <!-- Bandeau de mise à jour : affiché seulement quand une version plus récente existe -->
+  <div class="maj" id="maj" role="status" hidden>
+    <span id="maj-texte"></span>
+    <span class="maj-actions">
+      <button id="maj-maintenant" class="bouton petit" type="button" data-i18n="maj_maintenant">Mettre à jour</button>
+      <button id="maj-plus-tard" class="bouton petit secondaire" type="button" data-i18n="maj_plus_tard">Plus tard</button>
+    </span>
+  </div>
+
   <main class="scene">
     <div class="accroche" aria-hidden="true">
       <p class="accroche-marque"><img src="icone.svg" alt="" aria-hidden="true">Appel traduit</p>
@@ -144,6 +153,10 @@
               <option value="clair" data-i18n="theme_clair">Clair</option>
             </select>
           </label>
+          <div class="champ maj-reglage">
+            <button id="verifier-maj" class="bouton petit secondaire" type="button" data-i18n="maj_verifier">Vérifier les mises à jour</button>
+            <p id="maj-statut" class="statut" role="status" aria-live="polite"></p>
+          </div>
           <label class="consentement reglage-case">
             <input id="masquer" type="checkbox">
             <span data-i18n="masquer">Masquer les sous-titres</span>
@@ -155,12 +168,14 @@
 
   <div id="audio" aria-hidden="true"></div>
 
+  <script src="build.js"></script>
   <script src="langues.js"></script>
   <script src="config.js"></script>
   <script src="outils.js"></script>
   <script src="i18n.js"></script>
   <script src="plateforme.js"></script>
   <script src="app.js"></script>
+  <script src="miseajour.js"></script>
   <script type="module" src="fond3d.js"></script>
   <script>
     if ("serviceWorker" in navigator) {
