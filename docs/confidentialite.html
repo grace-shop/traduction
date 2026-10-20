@@ -204,7 +204,7 @@
     // Le thème choisi dans l'application s'applique aussi à cette page.
     try {
       const reglages = JSON.parse(localStorage.getItem("reglages") || "{}");
-      if (reglages.theme) document.documentElement.dataset.theme = reglages.theme;
+      document.documentElement.dataset.theme = reglages.theme || "ocean";
     } catch { /* stockage indisponible : thème par défaut */ }
   </script>
 </body>

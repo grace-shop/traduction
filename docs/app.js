@@ -43,10 +43,10 @@ function lireReglages() {
     const brut = JSON.parse(localStorage.getItem("reglages") || "{}");
     reglages = Outils.normaliserReglages(brut);
     reglages.interface = brut && typeof brut.interface === "string" ? brut.interface : null;
-    reglages.theme = brut && THEMES.includes(brut.theme) ? brut.theme : "nuit";
+    reglages.theme = brut && THEMES.includes(brut.theme) ? brut.theme : "ocean";
   } catch {
     reglages = Outils.normaliserReglages({});
-    reglages.theme = "nuit";
+    reglages.theme = "ocean";
   }
 }
 
@@ -62,7 +62,7 @@ function appliquerReglages() {
   corps.classList.toggle("sous-titres-masques", reglages.masquer);
   corps.classList.remove("taille-petite", "taille-normale", "taille-grande");
   corps.classList.add(`taille-${reglages.taille}`);
-  const theme = THEMES.includes(reglages.theme) ? reglages.theme : "nuit";
+  const theme = THEMES.includes(reglages.theme) ? reglages.theme : "ocean";
   $("theme").value = theme;
   document.documentElement.dataset.theme = theme;
   document.dispatchEvent(new Event("themechange"));
@@ -702,6 +702,20 @@ remplirLangues();
 remplirSelectLangues($("langue-appel"), "fr");
 const salleDuLien = new URLSearchParams(location.search).get("salle");
 if (salleDuLien) $("salle").value = salleDuLien.slice(0, 64);
+
+// Invitation ouverte depuis l'application installée : la salle du lien est reprise dans le champ.
+function appliquerLienEntrant(lien) {
+  try {
+    const salle = new URL(lien).searchParams.get("salle");
+    if (salle) $("salle").value = salle.slice(0, 64);
+  } catch { /* lien invalide : on ignore */ }
+}
+(function ecouterLiensEntrants() {
+  const appli = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App;
+  if (!appli) return;
+  appli.getLaunchUrl().then((r) => { if (r && r.url) appliquerLienEntrant(r.url); }).catch(() => {});
+  appli.addListener("appUrlOpen", (e) => { if (e && e.url) appliquerLienEntrant(e.url); });
+})();
 
 if ("speechSynthesis" in window) speechSynthesis.onvoiceschanged = remplirVoix;
 $("langue").addEventListener("change", remplirVoix);

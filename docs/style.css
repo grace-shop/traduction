@@ -1,6 +1,6 @@
 /* Appel traduit : interface.
    Tous les couleurs passent par des variables. Un thème = un bloc qui les redéfinit
-   (:root[data-theme="..."]). Thème par défaut : nuit. */
+   (:root[data-theme="..."]). Thème par défaut : océan. */
 :root {
   --fond: #04050b;
   --halo-1: rgba(125, 90, 255, .22);
