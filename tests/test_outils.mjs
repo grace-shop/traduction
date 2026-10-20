@@ -119,7 +119,8 @@ let groupes = 0;
   const codes = L.map((l) => l.code);
   assert.equal(new Set(codes).size, codes.length, "codes en double");
   for (const l of L) {
-    assert.ok(l.bcp47.toLowerCase().startsWith(l.code === "zh" ? "zh" : l.code), `${l.code} / ${l.bcp47}`);
+    const prefixe = l.code === "no" ? "nb" : l.code; // le norvégien est « nb-NO » pour le navigateur
+    assert.ok(l.bcp47.toLowerCase().startsWith(prefixe === "zh" ? "zh" : prefixe), `${l.code} / ${l.bcp47}`);
     assert.ok(l.nom.length > 0);
   }
   groupes++;

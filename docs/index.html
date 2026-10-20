@@ -24,6 +24,15 @@
   <!-- Écran d'ouverture : le logo apparaît, puis s'efface tout seul (voir style.css) -->
   <div class="splash" aria-hidden="true"><img src="icone.svg" alt=""></div>
 
+  <!-- Invitation ouverte sur Android : propose d'ouvrir la salle dans l'application -->
+  <div class="maj maj-bas" id="ouvrir-banniere" role="status" hidden>
+    <span data-i18n="ouvrir_texte">Cette salle est aussi dans l'application.</span>
+    <span class="maj-actions">
+      <a id="ouvrir-app" class="bouton petit" href="#" data-i18n="ouvrir_appli">Ouvrir dans l'application</a>
+      <a id="telecharger-app" class="bouton petit secondaire" href="https://github.com/grace-shop/traduction/releases/download/apk-latest/appel-traduit.apk" data-i18n="telecharger_appli">Télécharger l'application</a>
+    </span>
+  </div>
+
   <!-- Bandeau de mise à jour : affiché seulement quand une version plus récente existe -->
   <div class="maj" id="maj" role="status" hidden>
     <span id="maj-texte"></span>
@@ -76,6 +85,7 @@
         </label>
 
         <button id="rejoindre" class="bouton" type="button" data-i18n="rejoindre">Rejoindre l'appel</button>
+        <button id="partager-accueil" class="bouton petit secondaire partager" type="button" data-i18n="partager">Partager</button>
         <p id="statut" class="statut" role="status" aria-live="polite"></p>
         <p class="conseil" data-i18n="conseil">Un casque évite que la traduction ne soit captée par votre micro.</p>
       </div>
@@ -118,6 +128,7 @@
         </div>
 
         <div class="outils" role="group" data-i18n-aria="outils" aria-label="Outils de l'appel">
+          <button id="partager" class="bouton petit secondaire" type="button" data-i18n="partager">Partager</button>
           <button id="copier-lien" class="bouton petit secondaire" type="button" data-i18n="copier_lien">Copier le lien</button>
           <button id="afficher-qr" class="bouton petit secondaire" type="button" aria-expanded="false" aria-controls="qr" data-i18n="qr">QR code</button>
           <button id="reecouter" class="bouton petit secondaire" type="button" data-i18n="reecouter">Réécouter</button>

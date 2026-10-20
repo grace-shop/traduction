@@ -4,6 +4,8 @@ window.CONFIG = {
   TOKEN_URL: "https://appel-traduit-jetons.seigneurtakougnadi70.workers.dev/token",
   // Service de secours facultatif, compatible LibreTranslate (adresse complète /translate).
   // Laisser vide pour ne pas l'utiliser. Il sert si MyMemory est saturé ou indisponible.
+  // Traduction de qualité, par notre service (même adresse que le service d'appel, route /traduire).
+  TRADUCTION_URL: "https://appel-traduit-jetons.seigneurtakougnadi70.workers.dev/traduire",
   TRADUCTION_SECOURS: "",
   // Mot de passe commun de tous les appels. Il est envoyé automatiquement : personne ne le saisit.
   MOT_DE_PASSE: "appel2026",

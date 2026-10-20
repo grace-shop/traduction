@@ -39,6 +39,22 @@ jobs:
         run: |
           sed -i 's#</manifest>#    <uses-permission android:name="android.permission.RECORD_AUDIO" />\n    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />\n</manifest>#' android/app/src/main/AndroidManifest.xml
 
+      - name: Ouvrir l'application pour les liens du site
+        run: |
+          python3 - <<'PY'
+          p = "android/app/src/main/AndroidManifest.xml"
+          s = open(p, encoding="utf-8").read()
+          filtre = '''<intent-filter>
+              <action android:name="android.intent.action.VIEW" />
+              <category android:name="android.intent.category.DEFAULT" />
+              <category android:name="android.intent.category.BROWSABLE" />
+              <data android:scheme="https" android:host="grace-shop.github.io" android:pathPrefix="/traduction" />
+          </intent-filter>'''
+          assert s.count("</activity>") >= 1
+          s = s.replace("</activity>", filtre + "\n        </activity>", 1)
+          open(p, "w", encoding="utf-8").write(s)
+          PY
+
       - name: Enregistrer l'identifiant de cette version
         run: echo "window.BUILD_ID = \"${GITHUB_SHA}\";" > docs/build.js
 

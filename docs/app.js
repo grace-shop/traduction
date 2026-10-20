@@ -259,10 +259,31 @@ async function traduireSecours(texte, de, vers, adresse) {
   return resultats.join(" ");
 }
 
+// Traduction par notre service (Cloudflare) : meilleure qualité. Si elle échoue, on passe au service direct.
+async function traduireServeur(texte, de, vers) {
+  const adresse = window.CONFIG && window.CONFIG.TRADUCTION_URL;
+  if (!adresse) throw new Error("absent");
+  const reponse = await fetch(adresse, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ texte, de, vers }),
+  });
+  if (!reponse.ok) throw new Error("serveur");
+  const donnees = await reponse.json();
+  if (!donnees.traduit) throw new Error("vide");
+  return donnees.traduit;
+}
+
 async function traduire(texte, de, vers) {
   const cle = Outils.cleCache(texte, de, vers);
   const dejaFait = Outils.lireCache(cle);
   if (dejaFait) return dejaFait;
+
+  try {
+    const serveur = await traduireServeur(texte, de, vers);
+    Outils.memoriser(cle, serveur);
+    return serveur;
+  } catch { /* on passe au service direct */ }
 
   let traduit;
   try {
@@ -366,7 +387,7 @@ function memoriserLangue(participant) {
 // ---------- Outils de l'appel ----------
 
 async function copierLien() {
-  const lien = Outils.lienInvitation(location.href, salleCourante);
+  const lien = Outils.lienInvitation(adresseWeb(), salleCourante);
   try {
     await navigator.clipboard.writeText(lien);
     etatAppel(t("lien_copie"));
@@ -692,3 +713,44 @@ $("volume").addEventListener("input", (e) => { reglages.volume = Number(e.target
 $("taille").addEventListener("change", (e) => { reglages.taille = e.target.value; sauverReglages(); appliquerReglages(); });
 $("masquer").addEventListener("change", (e) => { reglages.masquer = e.target.checked; sauverReglages(); appliquerReglages(); });
 $("theme").addEventListener("change", (e) => { reglages.theme = e.target.value; sauverReglages(); appliquerReglages(); });
+
+// ---------- Partage et ouverture depuis un lien ----------
+
+// Adresse du site à partager. Dans l'application, on partage l'adresse du site (pas le fichier local).
+function adresseWeb() {
+  return (window.Plateforme && Plateforme.natif()) ? "https://grace-shop.github.io/traduction/" : location.href.split("?")[0];
+}
+
+async function partager() {
+  const salle = salleCourante || $("salle").value.trim();
+  const lien = Outils.lienInvitation(adresseWeb(), salle);
+  const texte = t("partage_texte", { salle: salle || t("titre") });
+  const afficher = document.body.dataset.phase === "appel" ? etatAppel : etat;
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: t("titre"), text: texte, url: lien });
+      return;
+    }
+    await navigator.clipboard.writeText(`${texte} ${lien}`);
+    afficher(t("lien_copie"));
+  } catch {
+    // Partage annulé par l'utilisateur, ou indisponible : rien à faire.
+  }
+}
+$("partager").addEventListener("click", partager);
+$("partager-accueil").addEventListener("click", partager);
+
+// Sur Android, une invitation ouverte dans le navigateur propose d'ouvrir la salle dans l'application.
+// Le lien intent ouvre l'application si elle est installée, sinon revient à cette page.
+function proposerOuverture() {
+  if (window.Plateforme && Plateforme.natif()) return;
+  if (!/Android/i.test(navigator.userAgent)) return;
+  const url = new URL(location.href);
+  const salle = url.searchParams.get("salle");
+  const chemin = location.pathname.replace(/\/index\.html$/, "/");
+  const cible = `${location.host}${chemin}${salle ? "?salle=" + encodeURIComponent(salle) : ""}`;
+  $("ouvrir-app").href = `intent://${cible}#Intent;scheme=https;package=fr.appeltraduit.app;` +
+    `S.browser_fallback_url=${encodeURIComponent(location.href)};end`;
+  $("ouvrir-banniere").hidden = false;
+}
+proposerOuverture();

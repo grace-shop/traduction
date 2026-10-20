@@ -598,3 +598,7 @@ body.taille-grande .bulle { font-size: 1.12rem; }
 .maj-actions { display: flex; gap: 8px; }
 .maj-actions .bouton.petit { width: auto; padding: 9px 14px; }
 .maj-reglage .bouton { width: 100%; }
+
+/* Bandeau d'ouverture de l'application : en bas de l'écran, pour ne pas gêner le bandeau de mise à jour */
+.maj.maj-bas { top: auto; bottom: max(12px, env(safe-area-inset-bottom)); }
+.bouton.partager { width: 100%; margin-top: 10px; }

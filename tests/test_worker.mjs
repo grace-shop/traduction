@@ -125,4 +125,40 @@ let groupes = 0;
   groupes++;
 }
 
+// 11. Traduction côté serveur : Google par défaut, DeepL si la clé est présente.
+{
+  const reel = globalThis.fetch;
+  const appels = [];
+  globalThis.fetch = async (adresse, options) => {
+    appels.push({ adresse: String(adresse), options });
+    if (String(adresse).includes("translate.googleapis.com")) {
+      return new Response(JSON.stringify([[["Bonjour", "Hello", null, null, 1]], null, "en"]), { status: 200 });
+    }
+    return new Response(JSON.stringify({ translations: [{ text: "Hello DeepL" }] }), { status: 200 });
+  };
+  try {
+    const demande = (corps, e = env) => worker.fetch(new Request("https://jetons.test/traduire", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "https://exemple.github.io" },
+      body: JSON.stringify(corps),
+    }), e, {}, maintenant);
+    let r = await demande({ texte: "Hello", de: "en", vers: "fr" });
+    assert.equal(r.status, 200);
+    assert.equal((await r.json()).traduit, "Bonjour");
+    assert.ok(appels[0].adresse.includes("sl=en") && appels[0].adresse.includes("tl=fr"));
+    r = await demande({ texte: "Hello", de: "en", vers: "fr" }, { ...env, DEEPL_CLE: "cle-test" });
+    assert.equal((await r.json()).traduit, "Hello DeepL");
+    assert.equal(appels[1].options.headers.Authorization, "DeepL-Auth-Key cle-test");
+    r = await demande({ texte: "Bonjour", de: "fr", vers: "fr" });
+    assert.equal((await r.json()).traduit, "Bonjour");
+    r = await demande({ texte: "x", de: "../etc", vers: "fr" });
+    assert.equal(r.status, 400);
+    r = await demande({ texte: "", de: "en", vers: "fr" });
+    assert.equal(r.status, 400);
+  } finally {
+    globalThis.fetch = reel;
+  }
+  groupes++;
+}
+
 console.log(`OK : ${groupes} groupes de tests du service de jetons passent`);

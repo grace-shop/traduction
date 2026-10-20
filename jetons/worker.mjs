@@ -95,7 +95,7 @@ async function enregistrerEchec(ip, compte) {
 // Les valeurs saisies dans le tableau de bord peuvent contenir des espaces ou un retour à la
 // ligne en trop, qui font échouer la vérification chez LiveKit. On les retire ici.
 // Chaque variable est lue par son nom : Cloudflare ne les expose pas toutes à l'énumération.
-const NOMS_CONFIG = ["LIVEKIT_URL", "LIVEKIT_API_KEY", "LIVEKIT_API_SECRET", "ORIGINE_AUTORISEE"];
+const NOMS_CONFIG = ["LIVEKIT_URL", "LIVEKIT_API_KEY", "LIVEKIT_API_SECRET", "ORIGINE_AUTORISEE", "DEEPL_CLE"];
 // Mot de passe fixe de tous les appels. L'application l'envoie toute seule : personne ne le saisit.
 const MOT_DE_PASSE_FIXE = "appel2026";
 function nettoyerEnv(env) {
@@ -107,6 +107,53 @@ function nettoyerEnv(env) {
   return propre;
 }
 
+// Traduction côté serveur : meilleure qualité que la mémoire de traductions du navigateur.
+// Si la clé DeepL est enregistrée (secret DEEPL_CLE), DeepL est utilisé ; sinon Google.
+// Les codes de langue sont courts (fr, en, pt...) ; l'entrée est limitée en taille.
+const CODE_LANGUE = /^[a-z]{2,3}(-[a-z]{2,4})?$/;
+
+function codeDeepLCible(code) {
+  const c = code.toUpperCase();
+  if (c === "EN") return "EN-US";
+  if (c === "PT") return "PT-PT";
+  return c;
+}
+
+async function traduireRequete(request, env, origine) {
+  let corps;
+  try { corps = await request.json(); } catch { return reponse({ erreur: "Requête invalide" }, 400, origine); }
+  const texte = String(corps.texte || "").trim().slice(0, 1500);
+  const de = String(corps.de || "").toLowerCase();
+  const vers = String(corps.vers || "").toLowerCase();
+  if (!texte || !CODE_LANGUE.test(de) || !CODE_LANGUE.test(vers)) {
+    return reponse({ erreur: "Requête invalide" }, 400, origine);
+  }
+  if (de.split("-")[0] === vers.split("-")[0]) return reponse({ traduit: texte }, 200, origine);
+  try {
+    let traduit;
+    if (env.DEEPL_CLE) {
+      const r = await fetch("https://api-free.deepl.com/v2/translate", {
+        method: "POST",
+        headers: { Authorization: "DeepL-Auth-Key " + env.DEEPL_CLE, "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ text: texte, target_lang: codeDeepLCible(vers), source_lang: de.split("-")[0].toUpperCase() }),
+      });
+      if (!r.ok) throw new Error("deepl");
+      traduit = (await r.json()).translations[0].text;
+    } else {
+      const adresse = "https://translate.googleapis.com/translate_a/single?client=gtx&dt=t" +
+        "&sl=" + encodeURIComponent(de.split("-")[0]) + "&tl=" + encodeURIComponent(vers.split("-")[0]) +
+        "&q=" + encodeURIComponent(texte);
+      const r = await fetch(adresse);
+      if (!r.ok) throw new Error("google");
+      const donnees = await r.json();
+      traduit = donnees[0].map((morceau) => morceau[0]).join("");
+    }
+    return reponse({ traduit }, 200, origine);
+  } catch {
+    return reponse({ erreur: "Traduction indisponible" }, 502, origine);
+  }
+}
+
 export default {
   async fetch(request, envBrut, ctx, maintenant = Math.floor(Date.now() / 1000)) {
     const env = nettoyerEnv(envBrut);
@@ -114,6 +161,9 @@ export default {
     if (request.method === "OPTIONS") return reponse({}, 204, origine);
 
     const url = new URL(request.url);
+    if (url.pathname === "/traduire" && request.method === "POST") {
+      return traduireRequete(request, env, origine);
+    }
     if (url.pathname !== "/token" || request.method !== "POST") {
       return reponse({ erreur: "Introuvable" }, 404, origine);
     }
