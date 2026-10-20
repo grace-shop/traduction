@@ -34,7 +34,7 @@
   function demarrerEcoute(bcp47, onTexte, onProbleme) {
     ecoute = true;
     suspendue = false;
-    if (natif()) return boucleNative(bcp47, onTexte);
+    if (natif()) return boucleNative(bcp47, onTexte, onProbleme);
     if (reconnaissanceWeb) { relancerWeb(); return Promise.resolve(); } // déjà créée : on la relance
     const RV = window.SpeechRecognition || window.webkitSpeechRecognition;
     reconnaissanceWeb = new RV();
@@ -66,7 +66,7 @@
   // Sur mobile natif, chaque appel à start() écoute une phrase, puis rend le résultat.
   let boucleActive = false; // une seule boucle d'écoute à la fois
 
-  async function boucleNative(bcp47, onTexte) {
+  async function boucleNative(bcp47, onTexte, onProbleme) {
     if (boucleActive) return;
     boucleActive = true;
     const sr = module("SpeechRecognition");
@@ -78,7 +78,10 @@
           const texte = ((r && r.matches) || [])[0];
           // Le texte est gardé même si on vient d'appuyer sur « Terminer » : c'est ce qui a été dit avant.
           if (texte && texte.trim()) onTexte(texte.trim());
-        } catch {
+          else if (typeof onProbleme === "function") onProbleme("rien entendu");
+        } catch (erreur) {
+          // Au lieu de rester muet, on affiche l'erreur de la reconnaissance vocale.
+          if (typeof onProbleme === "function") onProbleme(String((erreur && (erreur.message || erreur.code)) || erreur));
           await attendre(500);
         }
       }
