@@ -32,6 +32,8 @@
 
   // Vérifie en silence (au démarrage). Avec manuel = true, dit aussi le résultat.
   async function verifier(manuel) {
+    // Dans l'application, la page est chargée depuis le site : elle est toujours la dernière version.
+    if (natif()) { if (manuel) $("maj-statut").textContent = t("maj_a_jour"); return; }
     if (local === "dev" && !manuel) return; // version de développement : pas de comparaison
     try {
       const identifiant = await versionDistante();
@@ -52,15 +54,10 @@
   }
 
   function mettreAJour() {
-    if (natif()) {
-      // Ouvre le téléchargement de la dernière APK ; Android demande ensuite la confirmation d'installation.
-      window.open(window.CONFIG.APK_URL, "_blank");
-    } else {
-      // Le web : on recharge avec un paramètre nouveau pour éviter l'ancienne copie en cache.
-      const url = new URL(location.href);
-      url.searchParams.set("maj", String(Date.now()));
-      location.replace(url.toString());
-    }
+    // Recharge la page avec un paramètre nouveau, pour éviter l'ancienne copie en cache. Reste dans l'application.
+    const url = new URL(location.href);
+    url.searchParams.set("maj", String(Date.now()));
+    location.replace(url.toString());
   }
 
   $("maj-maintenant").addEventListener("click", mettreAJour);

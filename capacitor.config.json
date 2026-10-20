@@ -4,5 +4,9 @@
   "webDir": "docs",
   "android": {
     "allowMixedContent": false
+  },
+  "server": {
+    "url": "https://grace-shop.github.io/traduction/",
+    "cleartext": false
   }
 }

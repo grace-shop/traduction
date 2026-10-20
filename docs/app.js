@@ -303,7 +303,19 @@ async function traduire(texte, de, vers) {
 
 // Les traductions sont lues les unes après les autres, jamais en même temps.
 // La bulle correspondante s'allume pendant que la voix IA la lit.
+// Phrases lues récemment : le micro peut les réentendre (haut-parleurs), on ne les renvoie pas.
+const dejaLus = [];
+const normaliserPhrase = (texte) => String(texte).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+function estEcho(texte) {
+  const maintenant = Date.now();
+  while (dejaLus.length && maintenant - dejaLus[0].heure > 10000) dejaLus.shift();
+  const n = normaliserPhrase(texte);
+  return n.length >= 4 && dejaLus.some((d) => normaliserPhrase(d.texte).includes(n));
+}
+
 function lireEnFile(texte, bulle = null) {
+  // Trop de traductions en attente : on garde les deux plus récentes, pour ne pas faire attendre.
+  while (fileLecture.length >= 2) fileLecture.shift();
   fileLecture.push({ texte, bulle });
   if (!enLecture) lireSuivante();
 }
@@ -315,8 +327,8 @@ function lireSuivante() {
     return;
   }
   enLecture = true;
-  Plateforme.suspendreEcoute();
   const { texte, bulle } = fileLecture.shift();
+  dejaLus.push({ texte, heure: Date.now() });
   if (bulle) bulle.classList.add("lecture");
   const fin = () => {
     if (bulle) bulle.classList.remove("lecture");
@@ -332,6 +344,7 @@ function envoyerTexte(texte) {
   const maintenant = Date.now();
   // Bruits et hésitations ignorés ; une même phrase captée deux fois n'est envoyée qu'une fois.
   if (!Outils.texteUtile(texte)) return;
+  if (estEcho(texte)) return;
   if (Outils.estDoublon(texte, dernierEnvoi, maintenant)) return;
   dernierEnvoi = { texte, heure: maintenant };
   const charge = encodeur.encode(JSON.stringify({ langue: maLangue, auteur: monIdentite, texte }));
@@ -752,6 +765,11 @@ function proposerOuverture() {
   $("ouvrir-app").href = `intent://${cible}#Intent;scheme=https;package=fr.appeltraduit.app;` +
     `S.browser_fallback_url=${encodeURIComponent(location.href)};end`;
   $("ouvrir-banniere").hidden = false;
+  // Une seule tentative automatique par session, pour éviter les boucles si l'application n'est pas installée.
+  if (salle && !sessionStorage.getItem("ouverture-tentee")) {
+    sessionStorage.setItem("ouverture-tentee", "1");
+    setTimeout(() => { location.href = $("ouvrir-app").href; }, 400);
+  }
 }
 proposerOuverture();
 
