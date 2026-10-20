@@ -5,6 +5,7 @@
 
   const TEXTES = {
     fr: {
+      reunions_bouton: "Réunions", reunions_titre: "Réunions planifiées", reunions_a_venir: "À venir", reunion_nouvelle: "Planifier une réunion", reunion_titre_champ: "Titre", reunion_date_champ: "Date et heure", reunion_duree_champ: "Durée", reunion_planifier: "Planifier", reunion_vide: "Aucune réunion à venir.", reunion_rejoindre: "Rejoindre", reunion_calendrier: "Ajouter au calendrier", reunion_creee: "Réunion planifiée.", reunion_erreur: "Impossible d'enregistrer la réunion. Vérifiez le titre et la date.", reunion_serveur: "Service des réunions indisponible pour l'instant.", reunion_retour: "Retour",
       partager: "Partager", partage_texte: "Rejoins mon appel « {salle} » sur Appel traduit.", ouvrir_texte: "Cette salle est aussi dans l'application.", ouvrir_appli: "Ouvrir dans l'application", telecharger_appli: "Télécharger l'application",
       maj_dispo: "Une nouvelle version est disponible.", maj_maintenant: "Mettre à jour", maj_plus_tard: "Plus tard", maj_verifier: "Vérifier les mises à jour", maj_a_jour: "Vous avez la dernière version.", maj_erreur: "Impossible de vérifier pour l'instant.", maj_aucune: "Aucune version publiée pour l'instant.",
       reglage_theme: "Thème", theme_nuit: "Nuit", theme_aurore: "Aurore", theme_ocean: "Océan", theme_emeraude: "Émeraude", theme_clair: "Clair",
@@ -43,6 +44,7 @@
       st_camera_on: "Caméra activée.", st_camera_off: "Caméra coupée.", st_camera_err: "La caméra n'est pas accessible.",
     },
     en: {
+      reunions_bouton: "Meetings", reunions_titre: "Scheduled meetings", reunions_a_venir: "Upcoming", reunion_nouvelle: "Schedule a meeting", reunion_titre_champ: "Title", reunion_date_champ: "Date and time", reunion_duree_champ: "Duration", reunion_planifier: "Schedule", reunion_vide: "No upcoming meetings.", reunion_rejoindre: "Join", reunion_calendrier: "Add to calendar", reunion_creee: "Meeting scheduled.", reunion_erreur: "Could not save the meeting. Check the title and date.", reunion_serveur: "Meetings service unavailable right now.", reunion_retour: "Back",
       partager: "Share", partage_texte: "Join my call “{salle}” on Appel traduit.", ouvrir_texte: "This room is also in the app.", ouvrir_appli: "Open in the app", telecharger_appli: "Download the app",
       maj_dispo: "A new version is available.", maj_maintenant: "Update now", maj_plus_tard: "Later", maj_verifier: "Check for updates", maj_a_jour: "You have the latest version.", maj_erreur: "Unable to check right now.", maj_aucune: "No version published yet.",
       reglage_theme: "Theme", theme_nuit: "Night", theme_aurore: "Aurora", theme_ocean: "Ocean", theme_emeraude: "Emerald", theme_clair: "Light",
@@ -81,6 +83,7 @@
       st_camera_on: "Camera on.", st_camera_off: "Camera off.", st_camera_err: "The camera is not available.",
     },
     es: {
+      reunions_bouton: "Reuniones", reunions_titre: "Reuniones programadas", reunions_a_venir: "Próximas", reunion_nouvelle: "Programar una reunión", reunion_titre_champ: "Título", reunion_date_champ: "Fecha y hora", reunion_duree_champ: "Duración", reunion_planifier: "Programar", reunion_vide: "No hay reuniones próximas.", reunion_rejoindre: "Unirse", reunion_calendrier: "Añadir al calendario", reunion_creee: "Reunión programada.", reunion_erreur: "No se pudo guardar la reunión. Revisa el título y la fecha.", reunion_serveur: "Servicio de reuniones no disponible ahora.", reunion_retour: "Volver",
       partager: "Compartir", partage_texte: "Únete a mi llamada «{salle}» en Appel traduit.", ouvrir_texte: "Esta sala también está en la aplicación.", ouvrir_appli: "Abrir en la aplicación", telecharger_appli: "Descargar la aplicación",
       maj_dispo: "Hay una nueva versión disponible.", maj_maintenant: "Actualizar ahora", maj_plus_tard: "Más tarde", maj_verifier: "Buscar actualizaciones", maj_a_jour: "Tienes la última versión.", maj_erreur: "No se puede comprobar ahora.", maj_aucune: "Aún no hay versión publicada.",
       reglage_theme: "Tema", theme_nuit: "Noche", theme_aurore: "Aurora", theme_ocean: "Océano", theme_emeraude: "Esmeralda", theme_clair: "Claro",
@@ -119,6 +122,7 @@
       st_camera_on: "Cámara activada.", st_camera_off: "Cámara desactivada.", st_camera_err: "La cámara no está disponible.",
     },
     pt: {
+      reunions_bouton: "Reuniões", reunions_titre: "Reuniões agendadas", reunions_a_venir: "Próximas", reunion_nouvelle: "Agendar uma reunião", reunion_titre_champ: "Título", reunion_date_champ: "Data e hora", reunion_duree_champ: "Duração", reunion_planifier: "Agendar", reunion_vide: "Nenhuma reunião próxima.", reunion_rejoindre: "Entrar", reunion_calendrier: "Adicionar ao calendário", reunion_creee: "Reunião agendada.", reunion_erreur: "Não foi possível guardar a reunião. Verifique o título e a data.", reunion_serveur: "Serviço de reuniões indisponível agora.", reunion_retour: "Voltar",
       partager: "Compartilhar", partage_texte: "Entre na minha chamada «{salle}» no Appel traduit.", ouvrir_texte: "Esta sala também está no aplicativo.", ouvrir_appli: "Abrir no aplicativo", telecharger_appli: "Baixar o aplicativo",
       maj_dispo: "Há uma nova versão disponível.", maj_maintenant: "Atualizar agora", maj_plus_tard: "Mais tarde", maj_verifier: "Verificar atualizações", maj_a_jour: "Você está com a versão mais recente.", maj_erreur: "Não é possível verificar agora.", maj_aucune: "Nenhuma versão publicada ainda.",
       reglage_theme: "Tema", theme_nuit: "Noite", theme_aurore: "Aurora", theme_ocean: "Oceano", theme_emeraude: "Esmeralda", theme_clair: "Claro",
@@ -157,6 +161,7 @@
       st_camera_on: "Câmera ativada.", st_camera_off: "Câmera desligada.", st_camera_err: "A câmera não está disponível.",
     },
     de: {
+      reunions_bouton: "Besprechungen", reunions_titre: "Geplante Besprechungen", reunions_a_venir: "Demnächst", reunion_nouvelle: "Besprechung planen", reunion_titre_champ: "Titel", reunion_date_champ: "Datum und Uhrzeit", reunion_duree_champ: "Dauer", reunion_planifier: "Planen", reunion_vide: "Keine bevorstehenden Besprechungen.", reunion_rejoindre: "Beitreten", reunion_calendrier: "Zum Kalender hinzufügen", reunion_creee: "Besprechung geplant.", reunion_erreur: "Besprechung konnte nicht gespeichert werden. Prüfe Titel und Datum.", reunion_serveur: "Besprechungsdienst derzeit nicht verfügbar.", reunion_retour: "Zurück",
       partager: "Teilen", partage_texte: "Tritt meinem Anruf „{salle}“ bei Appel traduit bei.", ouvrir_texte: "Dieser Raum ist auch in der App.", ouvrir_appli: "In der App öffnen", telecharger_appli: "App herunterladen",
       maj_dispo: "Eine neue Version ist verfügbar.", maj_maintenant: "Jetzt aktualisieren", maj_plus_tard: "Später", maj_verifier: "Auf Updates prüfen", maj_a_jour: "Du hast die neueste Version.", maj_erreur: "Prüfung im Moment nicht möglich.", maj_aucune: "Noch keine Version veröffentlicht.",
       reglage_theme: "Design", theme_nuit: "Nacht", theme_aurore: "Aurora", theme_ocean: "Ozean", theme_emeraude: "Smaragd", theme_clair: "Hell",
@@ -195,6 +200,7 @@
       st_camera_on: "Kamera an.", st_camera_off: "Kamera aus.", st_camera_err: "Die Kamera ist nicht verfügbar.",
     },
     ar: {
+      reunions_bouton: "الاجتماعات", reunions_titre: "الاجتماعات المجدولة", reunions_a_venir: "القادمة", reunion_nouvelle: "جدولة اجتماع", reunion_titre_champ: "العنوان", reunion_date_champ: "التاريخ والوقت", reunion_duree_champ: "المدة", reunion_planifier: "جدولة", reunion_vide: "لا توجد اجتماعات قادمة.", reunion_rejoindre: "انضمام", reunion_calendrier: "إضافة إلى التقويم", reunion_creee: "تمت جدولة الاجتماع.", reunion_erreur: "تعذّر حفظ الاجتماع. تحقق من العنوان والتاريخ.", reunion_serveur: "خدمة الاجتماعات غير متاحة حاليًا.", reunion_retour: "رجوع",
       partager: "مشاركة", partage_texte: "انضم إلى مكالمتي «{salle}» في Appel traduit.", ouvrir_texte: "هذه الغرفة موجودة أيضًا في التطبيق.", ouvrir_appli: "فتح في التطبيق", telecharger_appli: "تنزيل التطبيق",
       maj_dispo: "يتوفر إصدار جديد.", maj_maintenant: "تحديث الآن", maj_plus_tard: "لاحقًا", maj_verifier: "التحقق من التحديثات", maj_a_jour: "أنت تستخدم أحدث إصدار.", maj_erreur: "تعذّر التحقق الآن.", maj_aucune: "لم يُنشر أي إصدار بعد.",
       reglage_theme: "المظهر", theme_nuit: "ليلي", theme_aurore: "شفق", theme_ocean: "محيط", theme_emeraude: "زمردي", theme_clair: "فاتح",

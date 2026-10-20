@@ -154,6 +154,57 @@ async function traduireRequete(request, env, origine) {
   }
 }
 
+// Réunions planifiées. Stockées dans un espace Cloudflare KV (liaison REUNIONS).
+// Protégées par le même mot de passe commun que les appels.
+// Routes : /reunions/liste, /reunions/creer, /reunions/supprimer (toutes en POST, JSON).
+const MOTIF_SALLE = /^[\p{L}\p{N}_ -]{1,64}$/u;
+const DUREE_MAX_MIN = 480;
+const DUREE_MIN_MIN = 15;
+
+async function reunionsRequete(request, env, origine, chemin, maintenant) {
+  if (!env.REUNIONS) return reponse({ erreur: "Stockage des réunions non configuré" }, 500, origine);
+  let corps;
+  try { corps = await request.json(); } catch { return reponse({ erreur: "Requête invalide" }, 400, origine); }
+  if (!egalite(MOT_DE_PASSE_FIXE, String(corps.motdepasse || ""))) {
+    return reponse({ erreur: "Mot de passe incorrect" }, 401, origine);
+  }
+
+  if (chemin === "/reunions/liste") {
+    const liste = await env.REUNIONS.list({ prefix: "r:", limit: 500 });
+    const reunions = (await Promise.all(liste.keys.map((c) => env.REUNIONS.get(c.name, "json"))))
+      .filter((r) => r && r.fin >= (maintenant - 3600) * 1000)
+      .sort((a, b) => a.debut - b.debut)
+      .slice(0, 100);
+    return reponse({ reunions }, 200, origine);
+  }
+
+  if (chemin === "/reunions/creer") {
+    const titre = String(corps.titre || "").trim().slice(0, 80);
+    const salle = String(corps.salle || "").trim();
+    const debut = Number(corps.debut);
+    const duree = Math.min(Math.max(Number(corps.duree) || 60, DUREE_MIN_MIN), DUREE_MAX_MIN);
+    if (!titre || !MOTIF_SALLE.test(salle) || !Number.isFinite(debut) || debut < (maintenant - 86400) * 1000) {
+      return reponse({ erreur: "Titre, salle ou date invalide" }, 400, origine);
+    }
+    const id = crypto.randomUUID();
+    const reunion = { id, titre, salle, debut, fin: debut + duree * 60000 };
+    const cle = "r:" + String(debut).padStart(15, "0") + ":" + id;
+    await env.REUNIONS.put(cle, JSON.stringify(reunion), { expirationTtl: 60 * 60 * 24 * 120 });
+    return reponse({ reunion }, 201, origine);
+  }
+
+  if (chemin === "/reunions/supprimer") {
+    const id = String(corps.id || "");
+    if (!/^[0-9a-f-]{36}$/.test(id)) return reponse({ erreur: "Réunion invalide" }, 400, origine);
+    const liste = await env.REUNIONS.list({ prefix: "r:", limit: 500 });
+    const cle = liste.keys.map((c) => c.name).find((nom) => nom.endsWith(":" + id));
+    if (cle) await env.REUNIONS.delete(cle);
+    return reponse({ supprimee: Boolean(cle) }, 200, origine);
+  }
+
+  return reponse({ erreur: "Introuvable" }, 404, origine);
+}
+
 export default {
   async fetch(request, envBrut, ctx, maintenant = Math.floor(Date.now() / 1000)) {
     const env = nettoyerEnv(envBrut);
@@ -161,6 +212,9 @@ export default {
     if (request.method === "OPTIONS") return reponse({}, 204, origine);
 
     const url = new URL(request.url);
+    if (url.pathname.startsWith("/reunions") && request.method === "POST") {
+      return reunionsRequete(request, env, origine, url.pathname, maintenant);
+    }
     if (url.pathname === "/traduire" && request.method === "POST") {
       return traduireRequete(request, env, origine);
     }

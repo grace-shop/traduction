@@ -85,9 +85,42 @@
         </label>
 
         <button id="rejoindre" class="bouton" type="button" data-i18n="rejoindre">Rejoindre l'appel</button>
+        <button id="ouvrir-reunions" class="bouton petit secondaire partager" type="button" data-i18n="reunions_bouton">Réunions</button>
         <button id="partager-accueil" class="bouton petit secondaire partager" type="button" data-i18n="partager">Partager</button>
         <p id="statut" class="statut" role="status" aria-live="polite"></p>
         <p class="conseil" data-i18n="conseil">Un casque évite que la traduction ne soit captée par votre micro.</p>
+      </div>
+
+      <!-- Vue : réunions planifiées -->
+      <div class="vue-reunions">
+        <div class="reunions-tete">
+          <button id="reunions-retour" class="bouton petit secondaire" type="button" data-i18n="reunion_retour">Retour</button>
+          <h2 class="reunions-titre" data-i18n="reunions_titre">Réunions planifiées</h2>
+        </div>
+        <form id="formulaire-reunion" class="reunion-form">
+          <h3 class="reunions-sous" data-i18n="reunion_nouvelle">Planifier une réunion</h3>
+          <label class="champ"><span data-i18n="reunion_titre_champ">Titre</span>
+            <input id="reunion-titre" maxlength="80" autocomplete="off" required>
+          </label>
+          <label class="champ"><span data-i18n="reunion_date_champ">Date et heure</span>
+            <input id="reunion-date" type="datetime-local" required>
+          </label>
+          <label class="champ"><span data-i18n="reunion_duree_champ">Durée</span>
+            <select id="reunion-duree">
+              <option value="30">30 min</option>
+              <option value="60" selected>1 h</option>
+              <option value="90">1 h 30</option>
+              <option value="120">2 h</option>
+            </select>
+          </label>
+          <label class="champ"><span data-i18n="champ_salle">Nom de la salle</span>
+            <input id="reunion-salle" maxlength="64" autocomplete="off">
+          </label>
+          <button class="bouton" type="submit" data-i18n="reunion_planifier">Planifier</button>
+          <p id="reunion-statut" class="statut" role="status" aria-live="polite"></p>
+        </form>
+        <h3 class="reunions-sous" data-i18n="reunions_a_venir">À venir</h3>
+        <ul id="liste-reunions" class="liste-reunions"></ul>
       </div>
 
       <!-- Vue 2 : en appel -->

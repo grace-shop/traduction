@@ -721,8 +721,8 @@ function adresseWeb() {
   return (window.Plateforme && Plateforme.natif()) ? "https://grace-shop.github.io/traduction/" : location.href.split("?")[0];
 }
 
-async function partager() {
-  const salle = salleCourante || $("salle").value.trim();
+async function partager(salleChoisie) {
+  const salle = typeof salleChoisie === "string" ? salleChoisie : (salleCourante || $("salle").value.trim());
   const lien = Outils.lienInvitation(adresseWeb(), salle);
   const texte = t("partage_texte", { salle: salle || t("titre") });
   const afficher = document.body.dataset.phase === "appel" ? etatAppel : etat;
@@ -754,3 +754,136 @@ function proposerOuverture() {
   $("ouvrir-banniere").hidden = false;
 }
 proposerOuverture();
+
+// ---------- Réunions planifiées ----------
+
+const URL_REUNIONS = () => window.CONFIG.TOKEN_URL.replace(/\/token$/, "");
+
+// Appel au service des réunions. Le mot de passe commun est envoyé automatiquement.
+async function appelReunions(chemin, corps = {}) {
+  const reponse = await fetch(URL_REUNIONS() + chemin, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...corps, motdepasse: window.CONFIG.MOT_DE_PASSE }),
+  });
+  if (!reponse.ok) throw new Error("reunions");
+  return reponse.json();
+}
+
+function dateLisible(ms) {
+  return new Date(ms).toLocaleString(undefined, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+
+function echappeIcs(texte) {
+  return String(texte).replace(/\\/g, "\\\\").replace(/;/g, "\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+}
+
+// Fichier .ics : s'ouvre dans le calendrier du téléphone ou de l'ordinateur.
+function telechargerIcs(reunion) {
+  const format = (ms) => new Date(ms).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const lien = Outils.lienInvitation(adresseWeb(), reunion.salle);
+  const description = `${t("partage_texte", { salle: reunion.salle })} ${lien}`;
+  const contenu = [
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Appel traduit//FR", "BEGIN:VEVENT",
+    `UID:${reunion.id}@appel-traduit`, `DTSTAMP:${format(Date.now())}`,
+    `DTSTART:${format(reunion.debut)}`, `DTEND:${format(reunion.fin)}`,
+    `SUMMARY:${echappeIcs(reunion.titre)}`, `DESCRIPTION:${echappeIcs(description)}`,
+    `URL:${lien}`, "END:VEVENT", "END:VCALENDAR",
+  ].join("\r\n");
+  const fichier = new Blob([contenu], { type: "text/calendar;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(fichier);
+  a.download = "reunion-appel-traduit.ics";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+function afficherReunions(reunions) {
+  const liste = $("liste-reunions");
+  liste.textContent = "";
+  if (!reunions.length) {
+    const vide = document.createElement("li");
+    vide.className = "reunion-vide";
+    vide.textContent = t("reunion_vide");
+    liste.appendChild(vide);
+    return;
+  }
+  reunions.forEach((r) => {
+    const item = document.createElement("li");
+    item.className = "reunion";
+    const info = document.createElement("div");
+    info.className = "reunion-info";
+    const titre = document.createElement("strong");
+    titre.textContent = r.titre;
+    const date = document.createElement("span");
+    date.textContent = dateLisible(r.debut);
+    info.append(titre, date);
+    const actions = document.createElement("div");
+    actions.className = "reunion-actions";
+    const bouton = (texte, action, secondaire) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "bouton petit" + (secondaire ? " secondaire" : "");
+      b.textContent = texte;
+      b.addEventListener("click", action);
+      return b;
+    };
+    actions.append(
+      bouton(t("reunion_rejoindre"), () => {
+        $("salle").value = r.salle;
+        allerVers("accueil");
+        $("nom").focus();
+      }),
+      bouton(t("partager"), () => partager(r.salle), true),
+      bouton(t("reunion_calendrier"), () => telechargerIcs(r), true),
+    );
+    item.append(info, actions);
+    liste.appendChild(item);
+  });
+}
+
+async function chargerReunions() {
+  try {
+    const donnees = await appelReunions("/reunions/liste");
+    afficherReunions(donnees.reunions || []);
+  } catch {
+    $("reunion-statut").textContent = t("reunion_serveur");
+  }
+}
+
+function salleDepuisTitre(titre) {
+  const base = titre.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "reunion";
+  return `${base}-${Math.random().toString(36).slice(2, 6)}`;
+}
+
+$("ouvrir-reunions").addEventListener("click", () => {
+  allerVers("reunions");
+  $("reunion-statut").textContent = "";
+  const maintenant = new Date(Date.now() - new Date().getTimezoneOffset() * 60000);
+  $("reunion-date").min = maintenant.toISOString().slice(0, 16);
+  chargerReunions();
+});
+$("reunions-retour").addEventListener("click", () => allerVers("accueil"));
+
+$("formulaire-reunion").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const titre = $("reunion-titre").value.trim();
+  const debut = new Date($("reunion-date").value).getTime();
+  const salle = $("reunion-salle").value.trim() || salleDepuisTitre(titre);
+  $("reunion-salle").value = salle;
+  $("reunion-statut").textContent = "…";
+  try {
+    await appelReunions("/reunions/creer", {
+      titre, debut, salle, duree: Number($("reunion-duree").value),
+    });
+    $("reunion-statut").textContent = t("reunion_creee");
+    $("formulaire-reunion").reset();
+    $("reunion-salle").value = "";
+    chargerReunions();
+  } catch {
+    $("reunion-statut").textContent = t("reunion_erreur");
+  }
+});

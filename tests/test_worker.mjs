@@ -161,4 +161,45 @@ let groupes = 0;
   groupes++;
 }
 
+// 12. Réunions planifiées : créer, lister, supprimer, avec le mot de passe commun.
+{
+  const stock = new Map();
+  const kv = {
+    async list({ prefix }) { return { keys: [...stock.keys()].filter((k) => k.startsWith(prefix)).map((name) => ({ name })) }; },
+    async get(cle, type) { const v = stock.get(cle); return v === undefined ? null : JSON.parse(v); },
+    async put(cle, valeur) { stock.set(cle, valeur); },
+    async delete(cle) { stock.delete(cle); },
+  };
+  const envR = { ...env, REUNIONS: kv };
+  const appelR = (chemin, corps, e = envR) => worker.fetch(new Request("https://jetons.test" + chemin, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Origin: "https://exemple.github.io", "CF-Connecting-IP": "10.0.0.9" },
+    body: JSON.stringify(corps),
+  }), e, {}, maintenant);
+
+  const debut = (maintenant + 3600) * 1000;
+  let r = await appelR("/reunions/creer", { motdepasse: "appel2026", titre: "Point équipe", salle: "point-equipe", debut, duree: 60 });
+  assert.equal(r.status, 201);
+  const id = (await r.json()).reunion.id;
+  assert.equal(stock.size, 1);
+
+  r = await appelR("/reunions/liste", { motdepasse: "appel2026" });
+  const liste = (await r.json()).reunions;
+  assert.equal(liste.length, 1);
+  assert.equal(liste[0].titre, "Point équipe");
+
+  r = await appelR("/reunions/liste", { motdepasse: "mauvais" });
+  assert.equal(r.status, 401);
+  r = await appelR("/reunions/creer", { motdepasse: "appel2026", titre: "x", salle: "../etc", debut });
+  assert.equal(r.status, 400);
+
+  r = await appelR("/reunions/supprimer", { motdepasse: "appel2026", id });
+  assert.equal((await r.json()).supprimee, true);
+  assert.equal(stock.size, 0);
+
+  const sansStockage = await appelR("/reunions/liste", { motdepasse: "appel2026" }, env);
+  assert.equal(sansStockage.status, 500);
+  groupes++;
+}
+
 console.log(`OK : ${groupes} groupes de tests du service de jetons passent`);
