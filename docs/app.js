@@ -22,7 +22,7 @@ let maLangue = null;        // code court, par exemple "fr"
 let maLangueBcp = null;     // étiquette, par exemple "fr-FR"
 let monIdentite = null;
 let salleCourante = "";
-let micActif = true;
+let micActif = false;
 let analyseur = null;
 let contexteAudio = null;
 let fileLecture = [];
@@ -593,16 +593,15 @@ async function rejoindre() {
   suivreNiveau(micro);
   $("nom-salle").textContent = salle;
   $("langue-appel").value = maLangue;
-  micActif = true;
+  micActif = false;
+  micro.mute();
   $("micro").setAttribute("aria-pressed", "false");
-  $("micro-libelle").textContent = t("micro");
-  $("zone-orbe").classList.remove("muet");
+  $("micro-libelle").textContent = t("micro_parler");
+  $("zone-orbe").classList.add("muet");
   allerVers("appel");
   etatAppel(t("st_parlez"));
   rafraichirParticipants();
   appliquerAudio();
-
-  demarrerMicroTexte();
 }
 
 // Écoute ma voix et envoie chaque phrase. Une erreur bloquante est signalée à l'écran.
@@ -627,18 +626,20 @@ function changerLangue(nouvelle) {
   etatAppel(t("st_langue", { langue: trouverLangue(nouvelle).nom }));
 }
 
+// Tour de parole : on appuie pour parler, on appuie à nouveau pour terminer.
+// Le micro n'écoute que pendant ce tour, donc il n'entend ni les haut-parleurs ni les autres.
 function basculerMicro() {
   if (!micro) return;
   micActif = !micActif;
   if (micActif) {
     micro.unmute();
-    if (!enLecture) Plateforme.reprendreEcoute();
+    if (!enLecture) demarrerMicroTexte();
   } else {
     micro.mute();
     Plateforme.suspendreEcoute();
   }
-  $("micro").setAttribute("aria-pressed", String(!micActif));
-  $("micro-libelle").textContent = micActif ? t("micro") : t("reactiver");
+  $("micro").setAttribute("aria-pressed", String(micActif));
+  $("micro-libelle").textContent = micActif ? t("micro_terminer") : t("micro_parler");
   $("zone-orbe").classList.toggle("muet", !micActif);
   etatAppel(micActif ? t("st_micro_on") : t("st_micro_off"));
 }
