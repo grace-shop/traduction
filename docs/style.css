@@ -600,7 +600,19 @@ body.taille-grande .bulle { font-size: 1.12rem; }
 .maj-reglage .bouton { width: 100%; }
 
 /* Bandeau d'ouverture de l'application : en bas de l'écran, pour ne pas gêner le bandeau de mise à jour */
-.maj.maj-bas { top: auto; bottom: max(12px, env(safe-area-inset-bottom)); }
+/* Compact, refermable, et jamais par-dessus la salle d'appel */
+.maj.maj-bas {
+  top: auto;
+  bottom: max(10px, env(safe-area-inset-bottom));
+  width: max-content;
+  max-width: calc(100vw - 24px);
+  padding: 8px 8px 8px 14px;
+  gap: 10px;
+  font-size: .85rem;
+}
+.maj.maj-bas .bouton.petit { width: auto; padding: 8px 12px; font-size: .85rem; }
+.ouvrir-fermer { background: none; border: 0; color: inherit; font-size: 1.2rem; line-height: 1; padding: 4px 6px; cursor: pointer; opacity: .7; }
+body[data-phase="appel"] #ouvrir-banniere { display: none !important; }
 .bouton.partager { width: 100%; margin-top: 10px; }
 
 /* Réunions planifiées : une vue dans le même panneau */

@@ -778,6 +778,11 @@ function proposerOuverture() {
   const cible = `${location.host}${chemin}${salle ? "?salle=" + encodeURIComponent(salle) : ""}`;
   $("ouvrir-app").href = `intent://${cible}#Intent;scheme=https;package=fr.appeltraduit.app;` +
     `S.browser_fallback_url=${encodeURIComponent(location.href)};end`;
+  $("ouvrir-fermer").addEventListener("click", () => {
+    $("ouvrir-banniere").hidden = true;
+    try { sessionStorage.setItem("ouverture-fermee", "1"); } catch { /* */ }
+  });
+  if (sessionStorage.getItem("ouverture-fermee")) return;
   $("ouvrir-banniere").hidden = false;
   // Une seule tentative automatique par session, pour éviter les boucles si l'application n'est pas installée.
   if (salle && !sessionStorage.getItem("ouverture-tentee")) {
