@@ -67,7 +67,6 @@ jobs:
           gh release edit apk-latest --notes "Build: ${GITHUB_SHA}"
 
       - name: Mettre à jour l'identifiant du site (sans relancer le build)
-        if: github.event_name == 'push'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
