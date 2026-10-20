@@ -35,6 +35,7 @@
     ecoute = true;
     suspendue = false;
     if (natif()) return boucleNative(bcp47, onTexte);
+    if (reconnaissanceWeb) { relancerWeb(); return Promise.resolve(); } // déjà créée : on la relance
     const RV = window.SpeechRecognition || window.webkitSpeechRecognition;
     reconnaissanceWeb = new RV();
     reconnaissanceWeb.lang = bcp47;
@@ -63,17 +64,26 @@
   }
 
   // Sur mobile natif, chaque appel à start() écoute une phrase, puis rend le résultat.
+  let boucleActive = false; // une seule boucle d'écoute à la fois
+
   async function boucleNative(bcp47, onTexte) {
+    if (boucleActive) return;
+    boucleActive = true;
     const sr = module("SpeechRecognition");
-    while (ecoute) {
-      if (suspendue) { await attendre(200); continue; }
-      try {
-        const r = await sr.start({ language: bcp47, maxResults: 1, partialResults: false, popup: false });
-        const texte = ((r && r.matches) || [])[0];
-        if (texte && texte.trim() && !suspendue) onTexte(texte.trim());
-      } catch {
-        await attendre(500);
+    try {
+      while (ecoute) {
+        if (suspendue) { await attendre(200); continue; }
+        try {
+          const r = await sr.start({ language: bcp47, maxResults: 1, partialResults: false, popup: false });
+          const texte = ((r && r.matches) || [])[0];
+          // Le texte est gardé même si on vient d'appuyer sur « Terminer » : c'est ce qui a été dit avant.
+          if (texte && texte.trim()) onTexte(texte.trim());
+        } catch {
+          await attendre(500);
+        }
       }
+    } finally {
+      boucleActive = false;
     }
   }
 
