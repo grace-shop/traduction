@@ -44,7 +44,7 @@ jobs:
           python3 - <<'PY'
           p = "android/app/src/main/AndroidManifest.xml"
           s = open(p, encoding="utf-8").read()
-          filtre = '''<intent-filter>
+          filtre = '''<intent-filter android:autoVerify="true">
               <action android:name="android.intent.action.VIEW" />
               <category android:name="android.intent.category.DEFAULT" />
               <category android:name="android.intent.category.BROWSABLE" />
@@ -61,23 +61,53 @@ jobs:
       - name: Copier le site dans l'application
         run: npx cap sync android
 
+      - name: Préparer la signature fixe de l'APK
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PW: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then echo "SIGNATURE=debug" >> "$GITHUB_ENV"; exit 0; fi
+          echo "$KEYSTORE_B64" | base64 -d > android/app/appel.jks
+          python3 - <<'PY'
+          import os, re
+          p = "android/app/build.gradle"
+          s = open(p, encoding="utf-8").read()
+          bloc = """signingConfigs {
+              release {
+                  storeFile file("appel.jks")
+                  storePassword System.getenv("KEYSTORE_PW")
+                  keyAlias System.getenv("KEY_ALIAS")
+                  keyPassword System.getenv("KEYSTORE_PW")
+              }
+          }
+          """
+          assert s.count("buildTypes {") == 1
+          s = s.replace("buildTypes {", bloc + "buildTypes {", 1)
+          debut, fin = s.split("buildTypes {", 1)
+          fin = re.sub(r"(release \{)", r"\1\n            signingConfig signingConfigs.release", fin, count=1)
+          s = debut + "buildTypes {" + fin
+          open(p, "w", encoding="utf-8").write(s)
+          PY
+          echo "SIGNATURE=fixe" >> "$GITHUB_ENV"
+
       - name: Construire l'APK
         working-directory: android
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug
+          if [ "$SIGNATURE" = "fixe" ]; then ./gradlew assembleRelease; else ./gradlew assembleDebug; fi
 
       - name: Publier l'APK
         uses: actions/upload-artifact@v4
         with:
           name: appel-traduit-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: android/app/build/outputs/apk/*/app-*.apk
 
       - name: Publier l'APK sur une page de téléchargement
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk appel-traduit.apk
+          cp android/app/build/outputs/apk/*/app-*.apk appel-traduit.apk
           gh release view apk-latest >/dev/null 2>&1 || gh release create apk-latest --title "Appel traduit (Android)" --notes "Dernière version de l'application Android. Téléchargez appel-traduit.apk, puis installez-le sur votre téléphone." --prerelease
           gh release upload apk-latest appel-traduit.apk --clobber
           gh release edit apk-latest --notes "Build: ${GITHUB_SHA}"
